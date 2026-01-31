@@ -1,42 +1,73 @@
-claims:
-  - id: "001"
-    type: contract
-    statement: "The expression 2+2 evaluates to 4"
-    criteria:
-      - "Dies if 2+2 != 4 in Python"
-      - "Dies if 2+2 != 4 in integer arithmetic"
-      - "Dies if 2+2 == 5 (Orwellian test)"
-    context:
-      constraints: "Standard arithmetic, integer operands"
-      approach: "Execute 2+2 in Python, compare result to 4"
-    test:
-      method: "Direct Python evaluation with multiple verification approaches"
-      code: |
-        result = 2 + 2
-        is_four = (2 + 2 == 4)
-        is_five = (2 + 2 == 5)
-        all_passed = (result == 4) and is_four and (not is_five)
-    observations:
-      raw: |
-        Test 1 - Direct evaluation: 2+2 = 4
-          Criterion: Dies if 2+2 != 4
-          Result: SURVIVED
+experiment: 2-plus-2-equals-4-v2
+original_claim: "2+2=4"
+claim_type: belief
+domain: mathematics
 
-        Test 2 - Comparison: (2+2 == 4) = True
-          Criterion: Dies if False
-          Result: SURVIVED
+refined_claims:
+  - id: C1
+    statement: "In standard integer arithmetic (Z), 2+2=4"
+    falsifiable: true
+    kill_criteria:
+      - "Find a computation where 2+2 != 4 in integer arithmetic"
+      - "Derive a contradiction from Peano axioms"
+    test_strategy: axiomatic_proof
 
-        Test 3 - Orwellian: (2+2 == 5) = False
-          Criterion: Dies if 2+2 == 5
-          Result: SURVIVED
+  - id: C2
+    statement: "In modular arithmetic (Z/3Z), 2+2=4"
+    falsifiable: true
+    kill_criteria:
+      - "Compute 2+2 mod 3 and show it does not equal 4 mod 3"
+    test_strategy: empirical_computation
 
-        Test 4 - Type verification:
-          type(2+2) = <class 'int'>
-          2+2 is int: True
-      unexpected: "None - arithmetic behaved as expected"
-    verdict: SURVIVED
-    reasoning: "All three kill criteria failed to kill the claim. 2+2 evaluates to exactly 4 in Python integer arithmetic."
-    mutations:
-      - "Does 2+2=4 hold in floating point? (potential precision issues)"
-      - "Does 2+2=4 hold in modular arithmetic (mod 3)?"
-      - "Does 2+2=4 hold across all programming languages?"
+  - id: C3
+    statement: "2+2=4 holds in ALL number systems"
+    falsifiable: true
+    kill_criteria:
+      - "Find any number system where 2+2 != 4"
+    test_strategy: counterexample_search
+
+  - id: C4
+    statement: "No computational system will ever output anything other than 4 for 2+2"
+    falsifiable: true
+    kill_criteria:
+      - "Find any system (floating point edge case, overflow, etc.) producing different result"
+    test_strategy: empirical_edge_cases
+
+testing_priority:
+  - C3  # Most likely to be killed (overly broad)
+  - C2  # Modular arithmetic attack
+  - C4  # Computational edge cases
+  - C1  # Core claim (hardest to kill)
+
+verdicts:
+  C1:
+    status: SURVIVED
+    method: "Axiomatic proof from Peano + direct computation"
+    notes: "Core claim unbreakable in its proper domain"
+
+  C2:
+    status: KILLED
+    method: "Modular arithmetic analysis"
+    notes: "In Z/3Z, '4' does not exist as an element. Claim is undefined/false."
+
+  C3:
+    status: KILLED
+    method: "Counterexample search"
+    counterexamples:
+      - "Tropical semiring: 2+2=2"
+      - "Saturating arithmetic: 2+2=3"
+      - "Z/3Z: 2+2=1"
+
+  C4:
+    status: KILLED
+    method: "Computational edge case analysis"
+    counterexamples:
+      - "String concatenation: '2'+'2'='22'"
+      - "JS type coercion: '2'+2='22'"
+      - "Saturating 2-bit: 2+2=3"
+
+final_verdict:
+  original_claim: UNCERTAIN
+  reason: "Claim is TRUE in standard arithmetic but FALSE in many valid interpretations"
+  core_claim_C1: SURVIVED
+  insight: "Precision matters. '2+2=4' is not universally true - it requires specifying the number system."
