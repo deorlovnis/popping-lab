@@ -1,6 +1,8 @@
 # Popping Lab
 
-A falsification laboratory for ideas. Test claims against reality.
+Popping Lab is a falsification engine for the age of AI. Born from the need to verify the complex web of assumptions baked into modern software, it serves as a unified interface for ideation and verification. The framework employs agents to extract specific claims from your ideas and codebases, actively attempting to disprove them to distinguish actual feasibility from mere hallucination.
+
+Whether you are prototyping a wild idea or auditing an existing project, Popping Lab helps you see the reality of the code. It attempts to break confirmation bias and spark self-reflection, empowering you to confidently build what really matters.
 
 ## Philosophy
 
