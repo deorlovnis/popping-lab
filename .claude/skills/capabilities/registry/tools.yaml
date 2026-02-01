@@ -1,0 +1,53 @@
+# Tools Registry
+# Available tools for claim verification
+
+tools:
+  pytest:
+    name: pytest
+    purpose: "Test execution framework for Python"
+    check: "python -c 'import pytest'"
+    install: "uv add pytest"
+    claim_types: [equality, invariant, membership, ordering, grounding, feasibility]
+    alternatives: []
+
+  hypothesis:
+    name: hypothesis
+    purpose: "Property-based testing - generates test cases automatically"
+    check: "python -c 'import hypothesis'"
+    install: "uv add hypothesis"
+    claim_types: [equality, invariant, membership, ordering, feasibility]
+    alternatives: []
+
+  z3-solver:
+    name: z3-solver
+    purpose: "SMT solver for formal verification and constraint solving"
+    check: "python -c 'import z3'"
+    install: "uv add z3-solver"
+    claim_types: [invariant, membership, ordering]
+    alternatives: []
+
+  sympy:
+    name: sympy
+    purpose: "Symbolic mathematics for algebraic proofs"
+    check: "python -c 'import sympy'"
+    install: "uv add sympy"
+    claim_types: [equality, invariant]
+    alternatives: []
+
+# Tool categories for graceful degradation
+categories:
+  test_runners:
+    primary: pytest
+    description: "Execute test assertions"
+
+  property_testing:
+    primary: hypothesis
+    description: "Generate test cases from properties"
+
+  formal_verification:
+    primary: z3-solver
+    description: "Prove properties mathematically"
+
+  symbolic_math:
+    primary: sympy
+    description: "Algebraic manipulation and proof"

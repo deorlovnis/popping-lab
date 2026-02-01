@@ -1,6 +1,6 @@
 ---
 name: test-claim
-description: "Attack claims with tests, capture observations, render verdicts. Use when falsifier needs to execute tests. Supports contract (API/unit tests), belief (evidence search), and spark (POC building) methodologies."
+description: "Attack claims with tests, capture observations, render verdicts. Use when falsifier needs to execute tests. Supports property-based types: equality, invariant, membership, ordering, grounding, feasibility."
 ---
 
 # Test Claim
@@ -25,15 +25,29 @@ Attack claims and render verdicts.
 | **SURVIVED** | Claim held up | No criteria met, test was valid |
 | **UNCERTAIN** | Can't determine | Test was flawed, blocked, or inconclusive |
 
+## Property-Based Testing
+
+| Type | Kill Target | Test Method |
+|------|-------------|-------------|
+| equality | Find X ≠ Y | Compare actual vs expected |
+| invariant | Find ¬P | Search for constraint violation |
+| membership | Find X ∉ S | Test element against set criteria |
+| ordering | Find violation | Verify order relationships |
+| grounding | Find ungrounded | Trace claims to evidence |
+| feasibility | Show blocker | Build POC, identify blockers |
+
 ## Scripts
 
 - `scripts/notebook.py` — Generate experiment notebook
 
 ## References
 
-- `references/contract.md` — API and unit testing
-- `references/belief.md` — Evidence search methodology
-- `references/spark.md` — POC testing (also load build-poc skill)
+- `references/equality.md` — Testing X = Y claims
+- `references/invariant.md` — Testing P always holds claims
+- `references/membership.md` — Testing X ∈ S claims
+- `references/ordering.md` — Testing X ≤ Y claims
+- `references/grounding.md` — Testing attribution claims
+- `references/feasibility.md` — POC testing (also load build-poc skill)
 
 ## Output Format
 

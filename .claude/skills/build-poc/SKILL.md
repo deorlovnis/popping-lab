@@ -1,6 +1,6 @@
 ---
 name: build-poc
-description: "Build minimal proof-of-concept implementations for spark claims. Creates runnable POCs in the experiment's poc/ directory."
+description: "Build minimal proof-of-concept implementations for feasibility claims. Creates runnable POCs in the experiment's poc/ directory."
 ---
 
 # Build POC

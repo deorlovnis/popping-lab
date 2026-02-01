@@ -21,25 +21,44 @@ Extract claims from a codebase without running tests.
 
 ## What Gets Extracted
 
-### Contract Claims
+### Equality Claims
 
 Found in:
-- API route handlers
+- API route handlers (expected responses)
 - Function signatures with type hints
-- Error handling patterns
-- Validation logic
-- Test files (existing tests = implicit claims)
+- Test assertions (expected = actual)
 
-### Belief Claims
+### Invariant Claims
 
 Found in:
-- Comments mentioning performance
-- TODO/FIXME notes
-- Documentation claims
-- README assertions
-- Config values with implicit assumptions
+- Comments mentioning performance bounds
+- Constraint assertions
+- Config values with limits
+- Documentation claims about guarantees
 
-### Spark Claims
+### Membership Claims
+
+Found in:
+- Validation logic
+- Type hints
+- Enum definitions
+- Input sanitization
+
+### Ordering Claims
+
+Found in:
+- Sorting logic
+- Queue implementations
+- Comments about priority
+
+### Grounding Claims
+
+Found in:
+- Documentation references
+- Test coverage expectations
+- Citation comments
+
+### Feasibility Claims
 
 Found in:
 - Comments about future features
@@ -69,14 +88,14 @@ source:
 
 claims:
   - id: "001"
-    type: contract
-    statement: "POST /api/users requires authentication"
+    type: equality
+    statement: "POST /api/users returns 401 without auth"
     source_file: "routes/users.py:42"
     confidence: high
 
   - id: "002"
-    type: belief
-    statement: "Query caching improves response time"
+    type: invariant
+    statement: "Query caching improves response time by >30%"
     source_file: "services/db.py:15"
     source_text: "# Cache this for performance"
     confidence: medium
@@ -90,5 +109,5 @@ This command uses the **extract-claims** skill to:
 2. Analyze code patterns
 3. Extract explicit claims (from docs, comments)
 4. Infer implicit claims (from code structure)
-5. Deduplicate and classify
-6. Output structured claims
+5. Classify by property type
+6. Deduplicate and output

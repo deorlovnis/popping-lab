@@ -1,0 +1,103 @@
+# Claim Types Registry
+# Property-based classification (replaces contract/belief/spark)
+
+types:
+  equality:
+    name: equality
+    description: "X equals Y - comparisons, expected values, return values"
+    tests: "Compare actual result to expected value"
+    kills: "Find input where X ≠ Y"
+    required_tools: [pytest]
+    optional_tools: [hypothesis]
+    examples:
+      - "POST /login returns 401 for bad password"
+      - "add(2, 2) returns 4"
+      - "parse('2024-01-01') equals Date object"
+    domains: [api, functions, parsing]
+
+  invariant:
+    name: invariant
+    description: "Property P always holds - bounds, constraints, guarantees"
+    tests: "Verify property holds across all states/inputs"
+    kills: "Find state where ¬P"
+    required_tools: [pytest]
+    optional_tools: [hypothesis, z3-solver]
+    examples:
+      - "balance >= 0 after any transaction"
+      - "response time < 100ms under normal load"
+      - "caching improves latency by >40%"
+    domains: [state, performance, contracts]
+
+  membership:
+    name: membership
+    description: "X belongs to set S - validation, filtering, classification"
+    tests: "Check if element satisfies set criteria"
+    kills: "Find X ∉ S (element outside expected set)"
+    required_tools: [pytest]
+    optional_tools: [hypothesis]
+    examples:
+      - "email matches valid email pattern"
+      - "user role is one of [admin, user, guest]"
+      - "output contains only ASCII characters"
+    domains: [validation, filtering, types]
+
+  ordering:
+    name: ordering
+    description: "X ≤ Y relationship holds - ranking, sorting, precedence"
+    tests: "Verify order relationship is preserved"
+    kills: "Find order violation (X > Y when X ≤ Y expected)"
+    required_tools: [pytest]
+    optional_tools: [hypothesis]
+    examples:
+      - "search results sorted by relevance"
+      - "older transactions processed before newer"
+      - "priority queue maintains heap property"
+    domains: [sorting, queues, ranking]
+
+  grounding:
+    name: grounding
+    description: "X is supported by Y - attribution, evidence, derivation"
+    tests: "Trace claim back to supporting evidence"
+    kills: "Find ungrounded X (claim without support)"
+    required_tools: [pytest]
+    optional_tools: []
+    examples:
+      - "all assertions have test coverage"
+      - "documentation matches implementation"
+      - "cited sources exist and support claim"
+    domains: [documentation, testing, citations]
+
+  feasibility:
+    name: feasibility
+    description: "Can X work? - new ideas, POCs, proof of concept"
+    tests: "Build minimal POC, demonstrate core mechanism"
+    kills: "Show blocker that prevents X from working"
+    required_tools: [pytest]
+    optional_tools: [hypothesis]
+    examples:
+      - "can predict mood from typing patterns"
+      - "can semantic search outperform keyword search"
+      - "can LLM fix bugs from error messages alone"
+    domains: [ideas, research, prototypes]
+
+# Migration guide from old types
+migration:
+  contract:
+    - to: equality
+      when: "comparing return values, status codes, outputs"
+    - to: invariant
+      when: "checking constraints that must always hold"
+    - to: membership
+      when: "validating input belongs to expected set"
+
+  belief:
+    - to: invariant
+      when: "performance bounds, metrics that should hold"
+    - to: ordering
+      when: "ranking stability, comparison claims"
+    - to: grounding
+      when: "claims need evidence or attribution"
+
+  spark:
+    - to: feasibility
+      when: "testing if something can work at all"

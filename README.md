@@ -15,7 +15,7 @@ Inspired by Karl Popper's falsificationism: we can never prove ideas true, but w
 
 ## Usage
 
-### Test a Wild Idea (Spark)
+### Test a Wild Idea
 
 ```bash
 /test-claim "predict mood from typing patterns"
@@ -47,31 +47,71 @@ Extracts claims from code and tests them.
 /jester "what do we learn from failure"
 ```
 
-## Claim Types
+## Methodology: How Verification Works
+
+Popping Lab uses **registry-based capability detection** to reliably verify claims.
+
+### Claim Classification
+
+Claims are classified by the **property being tested**:
+
+| Property | Tests | Kill Criteria |
+|----------|-------|---------------|
+| equality | X = Y | Find X ≠ Y |
+| invariant | P holds | Find ¬P |
+| membership | X ∈ S | Find X ∉ S |
+| ordering | X ≤ Y | Find violation |
+| grounding | X ↔ Y | Find ungrounded |
+| feasibility | Can X? | Show blocker |
+
+### Verification Flow
+
+```
+┌──────────┐     ┌────────────┐     ┌──────────┐     ┌────────────┐     ┌────────┐
+│  popper  │ ──> │ technician │ ──> │ claimer  │ ──> │ falsifier  │ ──> │ jester │
+│(orchestr)│     │(validate)  │     │(refine)  │     │(test)      │     │(reflect)│
+└──────────┘     └────────────┘     └──────────┘     └────────────┘     └────────┘
+      │                │                  │                  │               │
+      │          testability         claims.yaml        verdict          wisdom
+      │            report                                    │
+      └──────────────────────────────────────────────────────┴──> experiment.ipynb
+```
+
+1. **POPPER** classifies claim → looks up in registry
+2. **TECHNICIAN** validates tools available, checks testability
+3. **CLAIMER** refines with kill criteria from registry
+4. **FALSIFIER** attacks using registered verification method
+5. **JESTER** reflects
+
+### Testability Levels
+
+| Level | Meaning |
+|-------|---------|
+| full | Type known, tools available |
+| partial | Type known, some tools missing |
+| manual | Guidance only, no automation |
+| unknown | Need extension protocol |
+| blocked | Required tool unavailable |
+
+### Extension Protocol
+
+Unknown claim types trigger 3 questions:
+1. What makes this TRUE?
+2. What makes this FALSE?
+3. How do we measure it?
+
+Answers create a new registry entry, extending the system's capabilities.
+
+## Claim Types (Property-Based)
 
 | Type | Description | Example |
 |------|-------------|---------|
-| **contract** | Code behavior | "POST /login returns 401 for bad password" |
-| **belief** | Assumption | "Caching improves latency by 40%" |
-| **spark** | Feasibility | "Can predict mood from typing" |
-
-## How It Works
-
-```
-┌──────────┐     ┌──────────┐     ┌────────────┐     ┌────────┐
-│  popper  │ ──> │ claimer  │ ──> │ falsifier  │ ──> │ jester │
-│(orchestr)│     │(refine)  │     │(test)      │     │(reflect)│
-└──────────┘     └──────────┘     └────────────┘     └────────┘
-      │                │                  │               │
-      │           claims.yaml        verdict          wisdom
-      │                                   │
-      └───────────────────────────────────┴──> experiment.ipynb
-```
-
-1. **Popper** receives your input and orchestrates the flow
-2. **Claimer** refines fuzzy ideas into sharp, testable claims
-3. **Falsifier** attacks claims with strongest possible tests
-4. **Jester** provides zen reflection on the process
+| **equality** | X equals Y | "POST /login returns 401 for bad password" |
+| **invariant** | P always holds | "Caching improves latency by >40%" |
+| **membership** | X belongs to S | "Email matches valid format" |
+| **ordering** | X ≤ Y relationship | "Results sorted by relevance" |
+| **grounding** | X supported by Y | "All assertions have test coverage" |
+| **feasibility** | Can X work? | "Can predict mood from typing" |
 
 ## Output Structure
 
@@ -80,7 +120,7 @@ lab/
 └── <experiment-name>/
     ├── experiment.ipynb    # Full record
     ├── claims.yaml         # Claims and verdicts
-    ├── poc/                # POC code (for sparks)
+    ├── poc/                # POC code (for feasibility)
     └── README.md           # Experiment summary
 ```
 
@@ -99,6 +139,7 @@ lab/
 3. **Strongest attack** — Try to disprove, not confirm
 4. **Context isolation** — Each agent sees only what it needs
 5. **Raw observations** — Capture everything, interpret later
+6. **Registry-based** — Capabilities are explicit and extensible
 
 ## Extending
 
@@ -112,6 +153,20 @@ python .claude/skills/skill-builder/scripts/init_skill.py my-skill --path .claud
 
 ```bash
 python .claude/skills/skill-builder/scripts/validate.py .claude/skills/my-skill
+```
+
+### Add a Claim Type
+
+Extend the registry at `.claude/skills/capabilities/registry/claim_types.yaml`:
+
+```yaml
+types:
+  my_new_type:
+    name: my_new_type
+    description: "What this type tests"
+    tests: "How verification works"
+    kills: "Kill criteria template"
+    required_tools: [pytest]
 ```
 
 ## License

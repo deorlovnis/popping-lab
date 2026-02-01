@@ -6,39 +6,27 @@ A standalone falsification laboratory for ideas.
 
 Popping Lab tests claims against reality. Ideas enter as hypotheses. They leave as **KILLED**, **SURVIVED**, or **UNCERTAIN**.
 
-## CRITICAL: Workflow Execution
+## Architecture: Command-Level Orchestration
 
-**NEVER execute experiments directly.** Always invoke the **popper** agent via Task tool:
+The `/test-claim` command orchestrates experiments by invoking agents sequentially. The main conversation acts as orchestrator—agents do NOT spawn other agents.
+
+### Orchestration Flow
 
 ```
-Task(subagent_type="popper", prompt="<claim or path>")
+/test-claim
+    │
+    ├─→ Task(popper, opus) ─→ triage result
+    │
+    ├─→ Task(technician, sonnet) ─→ testability report
+    │
+    ├─→ Task(claimer, sonnet) ─→ claims.yaml + POC/tests
+    │
+    ├─→ Task(falsifier, opus) ─→ verdicts
+    │
+    ├─→ Task(jester, opus) ─→ reflection
+    │
+    └─→ Generate experiment.ipynb
 ```
-
-### Required Agent Orchestration
-
-When `/test-claim` is invoked, the following MUST happen:
-
-1. **POPPER** (orchestrator) receives input
-   - Classifies claim type (contract/belief/spark)
-   - Creates experiment directory
-   - Routes to other agents IN SEQUENCE
-
-2. **CLAIMER** refines the claim
-   - Proposes multiple testing strategies (not just one!)
-   - For math: axiomatic proof, counterexamples, edge cases
-   - For code: unit tests, integration, fuzzing
-   - Outputs: refined claims with kill criteria
-
-3. **FALSIFIER** attacks claims
-   - Uses STRONGEST attack (try to kill, not confirm)
-   - Executes actual tests
-   - Captures raw observations
-   - Renders verdict per claim
-
-4. **JESTER** reflects (NEVER SKIP)
-   - Receives 3-sentence brief ONLY
-   - Provides zen insight
-   - Always runs last
 
 ### Visible Handoffs
 
@@ -56,15 +44,19 @@ Result: 4. SURVIVED.
 
 **Correct pattern:**
 ```
-POPPER: Received "2+2=4", classifying as belief...
-→ Routing to CLAIMER
+POPPER: Received "2+2=4", classifying as equality...
+→ Triage complete
 
-CLAIMER: Proposing 4 testing strategies...
-[shows strategies]
-→ Routing to FALSIFIER
+TECHNICIAN: Checking capabilities...
+[testability: full, tools: pytest available]
+→ Validation complete
 
-FALSIFIER: Attacking C1 with axiomatic proof...
-[shows tests and results]
+CLAIMER: Building claims and tests...
+[claims.yaml created]
+→ Build complete
+
+FALSIFIER: Attacking claims...
+[observations and verdict]
 
 JESTER: [reflection]
 ```
@@ -75,13 +67,15 @@ JESTER: [reflection]
 - `/extract-claims <path>` — Extract claims from codebase
 - `/jester [koan]` — Zen reflection
 
-## Architecture
+## Directory Structure
 
 ```
 .claude/
 ├── commands/     # Slash commands
 ├── agents/       # Agent definitions
 └── skills/       # Procedural knowledge
+    └── capabilities/
+        └── registry/   # Claim types and tools registry
 
 lab/              # Experiment output (per experiment)
 └── <name>/
@@ -90,30 +84,44 @@ lab/              # Experiment output (per experiment)
     └── poc/
 ```
 
-## Claim Types
+## Claim Types (Property-Based)
 
-| Type | What It Is | How It's Tested |
-|------|------------|-----------------|
-| **contract** | Code behavior | Run tests, API calls |
-| **belief** | Assumption | Gather evidence |
-| **spark** | Feasibility | Build POC |
+| Type | What It Tests | Kill Criteria |
+|------|---------------|---------------|
+| **equality** | X = Y | Find input where X ≠ Y |
+| **invariant** | P always holds | Find state where ¬P |
+| **membership** | X ∈ S | Find X ∉ S |
+| **ordering** | X ≤ Y | Find order violation |
+| **grounding** | X supported by Y | Find ungrounded X |
+| **feasibility** | Can X work? | Show blocker |
 
 ## Agents
 
-| Agent | Role | Invocation |
-|-------|------|------------|
-| **popper** | Orchestrates the experiment | `Task(subagent_type="popper")` — ALWAYS start here |
-| **claimer** | Refines claims, proposes strategies | Invoked BY popper only |
-| **falsifier** | Attacks claims, renders verdict | Invoked BY popper only |
-| **jester** | Zen reflection | Invoked BY popper only, NEVER skip |
+| Agent | Model | Role | Skills |
+|-------|-------|------|--------|
+| **popper** | opus | Triage: classify claims, determine strategy | capabilities, test-claim |
+| **technician** | sonnet | Validate: check testability with existing tools | capabilities |
+| **claimer** | sonnet | Build: create POC/tests (main workhorse) | build-poc, refine-claim, extract-claims, software-philosophy, python-standards |
+| **falsifier** | opus | Attack: execute tests, render verdicts | ALL project skills |
+| **jester** | opus | Reflect: zen insight (read-only) | ALL project skills |
 
-**Important:** Only popper is invoked directly. Other agents are invoked by popper during orchestration.
+**Important:** Agents are invoked by the orchestrating command (`/test-claim`), not by each other.
 
 ## Verdicts
 
 - **KILLED** — Falsification criteria met
 - **SURVIVED** — Criteria not met, test valid
 - **UNCERTAIN** — Inconclusive
+
+## Testability Levels
+
+| Level | Meaning | Action |
+|-------|---------|--------|
+| `full` | Type known, tools available | Proceed normally |
+| `partial` | Some tools missing | Proceed with reduced verification |
+| `manual` | No automated tools | Guidance only |
+| `unknown` | Type not in registry | Run extension protocol |
+| `blocked` | Required tool unavailable | Report and ask user |
 
 ## Key Principles
 
@@ -122,5 +130,6 @@ lab/              # Experiment output (per experiment)
 3. **Seek the strongest attack** — Try to kill the claim
 4. **Context isolation** — Agents only see what they need
 5. **Capture everything** — Raw observations matter
-6. **Propose multiple strategies** — Claimer MUST offer different testing approaches before falsifier runs
-7. **Never shortcut orchestration** — All 4 agents must run, visible handoffs required
+6. **Propose multiple strategies** — Claimer MUST offer different testing approaches
+7. **Visible handoffs** — User sees each agent transition
+8. **Registry-based capabilities** — Check testability before execution

@@ -1,0 +1,34 @@
+# Registry Schema
+# Validation rules for claim_types.yaml and tools.yaml entries
+
+claim_type:
+  required:
+    - name          # Property type identifier
+    - description   # What this type tests
+    - tests         # How verification works
+    - kills         # Kill criteria template
+    - required_tools # Minimum tools needed
+
+  optional:
+    - optional_tools # Nice-to-have tools
+    - examples       # Example claims of this type
+    - domains        # Where this type commonly appears
+
+  constraints:
+    name: "^[a-z_]+$"  # lowercase with underscores
+    kills: "Must be falsifiable (start with 'Find...')"
+
+tool:
+  required:
+    - name      # Tool identifier
+    - purpose   # What it does
+    - check     # Command to verify availability
+    - install   # How to install (or "manual")
+
+  optional:
+    - claim_types  # Which types this tool supports
+    - alternatives # Fallback tools
+
+  constraints:
+    name: "^[a-z0-9-]+$"  # lowercase with hyphens
+    check: "Must be runnable command"

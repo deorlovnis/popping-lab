@@ -11,47 +11,47 @@ Find testable claims hiding in code.
 
 1. **Scan project structure** — Identify key files and patterns
 2. **Analyze sources** — Look for claims in each source type
-3. **Classify claims** — contract, belief, or spark
+3. **Classify claims** — by property type
 4. **Rate confidence** — How certain is this claim?
 5. **Deduplicate** — Merge similar claims
 6. **Output** — Structured YAML
 
 ## Claim Sources
 
-### Code Structure (Contract Claims)
+### Code Structure (Equality/Invariant Claims)
 
-| Pattern | Implied Claim |
-|---------|---------------|
-| `@require_auth` decorator | "Endpoint requires authentication" |
-| `if not user.is_admin: raise 403` | "Non-admins get 403" |
-| `return JsonResponse(status=201)` | "Successful creation returns 201" |
-| Type hints | "Function accepts/returns these types" |
-| Validation logic | "Invalid input is rejected" |
+| Pattern | Implied Claim | Type |
+|---------|---------------|------|
+| `@require_auth` decorator | "Endpoint requires authentication" | equality |
+| `if not user.is_admin: raise 403` | "Non-admins get 403" | equality |
+| `return JsonResponse(status=201)` | "Successful creation returns 201" | equality |
+| Type hints | "Function accepts/returns these types" | membership |
+| `assert balance >= 0` | "Balance never negative" | invariant |
 
-### Comments and Docs (Belief Claims)
+### Comments and Docs (Invariant/Grounding Claims)
 
-| Pattern | Implied Claim |
-|---------|---------------|
-| `# This is fast because...` | Performance claim |
-| `# Cache this for better performance` | Caching helps |
-| README: "Handles 10k requests/sec" | Throughput claim |
-| `# Users prefer X` | User behavior claim |
+| Pattern | Implied Claim | Type |
+|---------|---------------|------|
+| `# This is fast because...` | Performance bound | invariant |
+| `# Cache this for better performance` | Caching helps | invariant |
+| README: "Handles 10k requests/sec" | Throughput claim | invariant |
+| `# Sorted by relevance` | Order maintained | ordering |
 
-### Tests (Contract Claims)
+### Tests (Equality/Membership Claims)
 
-| Pattern | Implied Claim |
-|---------|---------------|
-| `test_login_returns_401` | "Login can return 401" |
-| `assert response.json()["error"]` | "Response includes error field" |
-| Mocked behavior | "System depends on this behavior" |
+| Pattern | Implied Claim | Type |
+|---------|---------------|------|
+| `test_login_returns_401` | "Login returns 401" | equality |
+| `assert response.json()["error"]` | "Response includes error field" | membership |
+| Mocked behavior | "System depends on this behavior" | grounding |
 
-### TODOs and FIXMEs (Spark Claims)
+### TODOs and FIXMEs (Feasibility Claims)
 
-| Pattern | Implied Claim |
-|---------|---------------|
-| `# TODO: add caching` | "Caching would help" |
-| `# FIXME: this is slow` | "This needs optimization" |
-| `# Future: support X` | "X is feasible and valuable" |
+| Pattern | Implied Claim | Type |
+|---------|---------------|------|
+| `# TODO: add caching` | "Caching would help" | feasibility |
+| `# FIXME: this is slow` | "This needs optimization" | invariant |
+| `# Future: support X` | "X is feasible" | feasibility |
 
 ## Scripts
 
@@ -70,7 +70,7 @@ source:
 
 claims:
   - id: "001"
-    type: contract | belief | spark
+    type: equality | invariant | membership | ordering | grounding | feasibility
     statement: "<Testable claim>"
     source_file: "<file:line>"
     source_text: "<Original text that implied this>"
