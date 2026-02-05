@@ -1,8 +1,8 @@
-# Testing Grounding Claims
+# Testing Grounding Claims → Empirical Verification
 
-Grounding claims test that assertions are supported by evidence.
+Grounding claims are tested using **Empirical** truths in Veritas.
 
-Kill target: **Find ungrounded X (claim without support)**
+**Kill target:** Find observation that contradicts claimed support
 
 ## Methodology
 
@@ -20,11 +20,62 @@ What counts as evidence?
 - Documentation that describes the behavior
 - Citation that exists and is relevant
 
-### 3. Execute Grounding Checks
+### 3. Execute with Veritas
 
-**Test coverage:**
 ```python
+from veritas import Empirical, Verifier
+
+# Define grounding claim
+truth = Empirical(
+    statement="All public methods have docstrings",
+    observation_var="undocumented",
+    expected_predicate=lambda x: x is None,  # No undocumented methods
+    contradiction_description="Found public method without docstring",
+)
+
+# Check the codebase
+def find_undocumented_methods(module):
+    import inspect
+    for name, obj in inspect.getmembers(module):
+        if inspect.isfunction(obj) and not name.startswith('_'):
+            if not obj.__doc__:
+                return name
+    return None
+
+undocumented = find_undocumented_methods(my_module)
+
+# Use Verifier directly for Empirical predicates
+verifier = Verifier()
+result = verifier.verify_with_predicate(
+    truth, undocumented, "check_observation"
+)
+
+if result.is_killed():
+    print(f"Grounding broken: {undocumented} has no docstring")
+```
+
+### 4. Render Verdict
+
+| Scenario | Verdict |
+|----------|---------|
+| Ungrounded claim found | KILLED |
+| All claims have support | SURVIVED |
+| Can't verify all claims | UNCERTAIN |
+
+## Testing Patterns
+
+### Test Coverage
+
+```python
+from veritas import Empirical, Verifier
 import subprocess
+
+truth = Empirical(
+    statement="All assertions have test coverage",
+    observation_var="uncovered",
+    expected_predicate=lambda x: x is None or len(x) == 0,
+    contradiction_description="Found uncovered assertions",
+)
 
 # Run coverage analysis
 result = subprocess.run(
@@ -33,94 +84,107 @@ result = subprocess.run(
     text=True
 )
 
-# Check for uncovered assertions
-print(result.stdout)
-# Look for lines with 'assert' that show as uncovered
+# Parse for uncovered lines containing 'assert'
+uncovered_asserts = parse_uncovered_asserts(result.stdout)
+
+verifier = Verifier()
+verdict = verifier.verify_with_predicate(
+    truth, uncovered_asserts, "check_observation"
+)
+
+if verdict.is_killed():
+    print(f"Ungrounded assertions: {uncovered_asserts}")
 ```
 
-**Documentation coverage:**
+### Documentation Coverage
+
 ```python
+from veritas import Empirical, Verifier
 import ast
 import inspect
 
-def check_docstrings(module):
-    ungrounded = []
-    for name, obj in inspect.getmembers(module):
-        if inspect.isfunction(obj) and not obj.__doc__:
-            ungrounded.append(name)
-    return ungrounded
+truth = Empirical(
+    statement="All public functions documented",
+    observation_var="undocumented",
+    expected_predicate=lambda x: x is None,
+    contradiction_description="Found undocumented function",
+)
+
+def check_docstrings(module_path):
+    with open(module_path) as f:
+        tree = ast.parse(f.read())
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            if not node.name.startswith('_'):
+                if not ast.get_docstring(node):
+                    return node.name
+    return None
+
+undocumented = check_docstrings("src/mymodule.py")
+
+verifier = Verifier()
+result = verifier.verify_with_predicate(truth, undocumented, "check_observation")
 ```
 
-**Link validation:**
+### Link Validation
+
 ```python
+from veritas import Empirical, Verifier
 import requests
+import re
+
+truth = Empirical(
+    statement="All documentation links are valid",
+    observation_var="broken_link",
+    expected_predicate=lambda x: x is None,
+    contradiction_description="Found broken link",
+)
 
 def validate_links(doc_content):
-    links = extract_links(doc_content)
-    broken = []
+    url_pattern = r'https?://[^\s\)\]>]+'
+    links = re.findall(url_pattern, doc_content)
+
     for link in links:
         try:
-            response = requests.head(link, timeout=5)
+            response = requests.head(link, timeout=5, allow_redirects=True)
             if response.status_code >= 400:
-                broken.append(link)
-        except:
-            broken.append(link)
-    return broken
-```
+                return link
+        except requests.RequestException:
+            return link
+    return None
 
-### 4. Capture Observations
+with open("README.md") as f:
+    broken = validate_links(f.read())
 
-Record:
-- Coverage metrics
-- Ungrounded claims found
-- Broken links or missing evidence
-
-### 5. Render Verdict
-
-| Scenario | Verdict |
-|----------|---------|
-| Ungrounded claim found | KILLED |
-| All claims have support | SURVIVED |
-| Can't verify all claims | UNCERTAIN |
-
-## Output Format
-
-```yaml
-test:
-  method: "Checked test coverage for all assertions"
-  code: |
-    pytest --cov=src --cov-report=term-missing
-observations:
-  raw: |
-    Overall coverage: 87%
-    Uncovered lines in validator.py: 45, 67, 89
-    Line 45: assert input is not None
-    Line 67: assert len(data) > 0
-  unexpected: "Two assertions have no test coverage"
-verdict: KILLED
-reasoning: "Found 2 assertions without test coverage (ungrounded)"
-mutations:
-  - "Add tests for validator.py lines 45 and 67"
-```
-
-## Grounding Test Patterns
-
-### Test Coverage
-```bash
-pytest --cov=src --cov-fail-under=100
-```
-
-### Doc Coverage
-```python
-# Using interrogate
-interrogate -vv --fail-under=100 src/
+verifier = Verifier()
+result = verifier.verify_with_predicate(truth, broken, "check_observation")
 ```
 
 ### Citation Verification
+
 ```python
-for citation in citations:
-    assert citation.url_exists(), f"Citation not found: {citation}"
-    assert citation.supports_claim(), f"Citation doesn't support claim"
+from veritas import Empirical, Verifier
+
+truth = Empirical(
+    statement="All citations exist and are accessible",
+    observation_var="invalid_citation",
+    expected_predicate=lambda x: x is None,
+    contradiction_description="Found invalid citation",
+)
+
+def verify_citations(citations):
+    for citation in citations:
+        if not citation_exists(citation):
+            return citation
+        if not citation_supports_claim(citation):
+            return citation
+    return None
+
+invalid = verify_citations(paper_citations)
+
+verifier = Verifier()
+result = verifier.verify_with_predicate(truth, invalid, "check_observation")
 ```
 
 ## Tips

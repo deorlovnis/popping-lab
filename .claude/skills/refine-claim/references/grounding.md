@@ -1,6 +1,9 @@
-# Grounding Claim Refinement
+# Grounding Claim Refinement → Empirical Truth
 
-Grounding claims test that X is supported by Y — attribution, evidence, derivation.
+Grounding claims test that X is supported by Y. In Veritas, these become **Empirical** truths.
+
+**Veritas Type:** `Empirical`
+**Falsification Form:** Find observation that contradicts support
 
 ## Characteristics
 
@@ -38,40 +41,53 @@ Where might grounding be missing?
 - Outdated sources
 - Circular references
 
-### 4. Set Kill Criteria
+### 4. Set Falsification Form
 
-What proves grounding is broken?
-
-Kill template: **Find ungrounded X (claim without support)**
+For Empirical: **Find observation contradicting support**
 
 Examples:
-- "Dies if any assertion lacks test"
-- "Dies if public method undocumented"
-- "Dies if citation doesn't exist"
+- "Observe: assertion without test"
+- "Observe: public method without docstring"
+- "Observe: citation that doesn't exist"
 
-## Output Template
+## Veritas Output Template
 
-```yaml
-claims:
-  - id: "001"
-    type: grounding
-    statement: "<X> is supported by <Y>"
-    criteria:
-      - "Dies if X found without supporting Y"
-      - "Dies if Y doesn't actually support X"
-    context:
-      constraints: "<What counts as valid support>"
-      approach: "Trace each X to its Y"
+```python
+from veritas import Empirical
+
+# Test coverage
+truth = Empirical(
+    statement="All assertions have test coverage",
+    observation_var="uncovered_assertion",
+    expected_predicate=lambda x: x is None,  # No uncovered assertions
+    contradiction_description="Found assertion without test",
+)
+
+# Documentation coverage
+truth = Empirical(
+    statement="All public methods have docstrings",
+    observation_var="undocumented_method",
+    expected_predicate=lambda x: x is None,
+    contradiction_description="Found public method without docstring",
+)
+
+# Citation verification
+truth = Empirical(
+    statement="All citations exist and are accessible",
+    observation_var="broken_citation",
+    expected_predicate=lambda x: x is None,
+    contradiction_description="Found citation that doesn't resolve",
+)
 ```
 
 ## Testing Strategies
 
-| Strategy | Method | Tools |
-|----------|--------|-------|
-| Coverage analysis | Measure test coverage | pytest-cov |
-| Link checking | Verify references exist | custom |
-| Trace analysis | Follow derivation chain | custom |
-| Doc coverage | Check documentation completeness | interrogate |
+| Strategy | Method | Veritas Pattern |
+|----------|--------|-----------------|
+| Coverage analysis | Measure test coverage | pytest-cov + Empirical |
+| Link checking | Verify references exist | requests + Empirical |
+| Trace analysis | Follow derivation chain | custom + Empirical |
+| Doc coverage | Check documentation | interrogate + Empirical |
 
 ## Common Mistakes
 

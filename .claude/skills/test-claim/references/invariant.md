@@ -1,8 +1,8 @@
-# Testing Invariant Claims
+# Testing Invariant Claims → Modal Verification
 
-Invariant claims require searching for states where the property is violated.
+Invariant claims are tested using **Modal** truths in Veritas.
 
-Kill target: **Find state where ¬P**
+**Kill target:** ◇¬P (find state where property P is violated)
 
 ## Methodology
 
@@ -22,44 +22,54 @@ Where might violations hide?
 - Resource limits
 - Time-dependent behavior
 
-### 3. Execute Search Strategies
+### 3. Execute with Veritas
 
-**Property-based testing (recommended):**
 ```python
+from veritas import claim, Modal, sym, Verdict
+
+# Define the invariant
+balance = sym("balance")
+truth = Modal(
+    statement="balance >= 0 after any transaction",
+    invariant=balance >= 0,
+    state_var="balance",
+)
+
+# Test by searching for violations
+with claim(truth) as c:
+    # Simulate transactions
+    test_balance = simulate_transactions()
+    c.bind(balance=test_balance, state=test_balance)
+
+# Veritas checks if violation was found
+print(c.result.verdict)
+```
+
+### 4. Property-Based Testing
+
+```python
+from veritas import Modal, Verifier, Evidence, sym
 from hypothesis import given, strategies as st
 
+balance = sym("balance")
+truth = Modal(
+    statement="balance >= 0",
+    invariant=balance >= 0,
+)
+
 @given(st.integers(), st.integers())
-def test_balance_never_negative(deposit, withdraw):
+def test_balance_invariant(deposit, withdraw):
     account = Account(deposit)
     account.withdraw(withdraw)
-    assert account.balance >= 0  # Kill if violated
+
+    evidence = Evidence(bindings={
+        "balance": account.balance,
+        "state": account.balance,
+    })
+
+    result = Verifier().verify(truth, evidence)
+    assert result.verdict != Verdict.KILLED, f"Violated at balance={account.balance}"
 ```
-
-**Fuzz testing:**
-```python
-import random
-
-for _ in range(10000):
-    inputs = [random.randint(-1000, 1000) for _ in range(10)]
-    state = process(inputs)
-    assert invariant_holds(state), f"Violated with {inputs}"
-```
-
-**Boundary testing:**
-```python
-# Test at limits
-test_cases = [0, 1, -1, MAX_INT, MIN_INT, None]
-for case in test_cases:
-    result = process(case)
-    assert invariant_holds(result)
-```
-
-### 4. Capture Observations
-
-Record:
-- Any violation found (this kills the claim)
-- Search coverage (how much state space explored)
-- Near-violations (close to boundary)
 
 ### 5. Render Verdict
 
@@ -69,46 +79,74 @@ Record:
 | Searched thoroughly, no violation | SURVIVED |
 | Incomplete search | UNCERTAIN |
 
-## Output Format
-
-```yaml
-test:
-  method: "Property-based testing with 10,000 random inputs"
-  code: |
-    @given(st.integers())
-    def test_invariant(x):
-        result = process(x)
-        assert result >= 0
-observations:
-  raw: |
-    Ran 10,000 examples
-    Found violation at x = -5: result = -3
-  unexpected: "Negative input not handled"
-verdict: KILLED
-reasoning: "Invariant 'result >= 0' violated when x = -5"
-```
-
-## Invariant Testing Patterns
-
-### Always Non-negative
-```python
-assert value >= 0, f"Negative value: {value}"
-```
+## Testing Patterns
 
 ### Performance Bound
+
 ```python
+from veritas import claim, Modal, sym
 import time
-start = time.perf_counter()
-result = operation()
-elapsed = time.perf_counter() - start
-assert elapsed < 0.1, f"Took {elapsed}s, exceeds 100ms bound"
+
+latency = sym("latency")
+truth = Modal(
+    statement="response time < 100ms",
+    invariant=latency < 100,
+)
+
+with claim(truth) as c:
+    start = time.perf_counter()
+    result = operation()
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    c.bind(latency=elapsed_ms, state=elapsed_ms)
+
+if c.result.verdict == Verdict.KILLED:
+    print(f"Performance bound violated: {elapsed_ms}ms")
 ```
 
 ### State Consistency
+
 ```python
-def check_invariant(state):
-    assert state.total == sum(state.items)
-    assert len(state.items) <= state.max_size
+from veritas import claim, Modal, sym
+
+# Invariant: total == sum(items)
+total = sym("total")
+items_sum = sym("items_sum")
+
+truth = Modal(
+    statement="total equals sum of items",
+    invariant=total == items_sum,
+)
+
+with claim(truth) as c:
+    state = get_system_state()
+    c.bind(
+        total=state.total,
+        items_sum=sum(state.items),
+        state=state,
+    )
+```
+
+### Boundary Testing
+
+```python
+from veritas import Modal, Evidence, Verifier, sym
+
+x = sym("x")
+truth = Modal(
+    statement="result always positive",
+    invariant=x > 0,
+)
+
+test_cases = [0, 1, -1, float('inf'), float('-inf'), None]
+verifier = Verifier()
+
+for case in test_cases:
+    if case is not None:
+        evidence = Evidence(bindings={"x": case, "state": case})
+        result = verifier.verify(truth, evidence)
+        if result.is_killed():
+            print(f"Invariant violated at x={case}")
+            break
 ```
 
 ## Tips

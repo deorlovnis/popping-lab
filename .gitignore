@@ -30,3 +30,6 @@ htmlcov/
 .claude/settings.local.json
 
 lab/
+
+.mypy_cache/
+.pyre/

@@ -44,19 +44,19 @@ Result: 4. SURVIVED.
 
 **Correct pattern:**
 ```
-POPPER: Received "2+2=4", classifying as equality...
+POPPER: Received "2+2=4", classifying as Analytic...
 → Triage complete
 
-TECHNICIAN: Checking capabilities...
-[testability: full, tools: pytest available]
+TECHNICIAN: Checking Veritas testability...
+[testability: full, sympy available]
 → Validation complete
 
 CLAIMER: Building claims and tests...
-[claims.yaml created]
+[claims.yaml created with Veritas truth types]
 → Build complete
 
-FALSIFIER: Attacking claims...
-[observations and verdict]
+FALSIFIER: Attacking claims with Veritas...
+[VerdictResult: SURVIVED]
 
 JESTER: [reflection]
 ```
@@ -74,8 +74,14 @@ JESTER: [reflection]
 ├── commands/     # Slash commands
 ├── agents/       # Agent definitions
 └── skills/       # Procedural knowledge
-    └── capabilities/
-        └── registry/   # Claim types and tools registry
+
+src/veritas/      # SymPy-verified falsification library
+├── symbolic.py   # Formula building blocks
+├── truth.py      # Truth types (Analytic, Modal, Empirical, Probabilistic)
+├── evidence.py   # Evidence and Verdict structures
+├── engine.py     # Verification logic
+├── testing.py    # User-facing API (@verified, claim())
+└── extensions.py # Domain-specific extensions
 
 lab/              # Experiment output (per experiment)
 └── <name>/
@@ -84,52 +90,72 @@ lab/              # Experiment output (per experiment)
     └── poc/
 ```
 
-## Claim Types (Property-Based)
+## Veritas Truth Types
 
-| Type | What It Tests | Kill Criteria |
-|------|---------------|---------------|
-| **equality** | X = Y | Find input where X ≠ Y |
-| **invariant** | P always holds | Find state where ¬P |
-| **membership** | X ∈ S | Find X ∉ S |
-| **ordering** | X ≤ Y | Find order violation |
-| **grounding** | X supported by Y | Find ungrounded X |
-| **feasibility** | Can X work? | Show blocker |
+| Truth Type | What It Tests | Falsification Form |
+|------------|---------------|-------------------|
+| **Analytic** | X = Y, X ∈ S, X ≤ Y | ∃x: f(x) ≠ expected |
+| **Modal** | P always holds | ◇¬P (find state where ¬P) |
+| **Empirical** | Observation supports claim | Find contradicting observation |
+| **Probabilistic** | P(X) op threshold | Find metric violating threshold |
+
+### Mapping from Legacy Types
+
+| Old Type | Veritas Truth | Rationale |
+|----------|---------------|-----------|
+| equality | `Analytic` | ∃x: f(x) ≠ expected |
+| membership | `Analytic` | ∃x: x ∉ S |
+| ordering | `Analytic` | ∃x,y: order violated |
+| invariant | `Modal` | ◇¬P |
+| grounding | `Empirical` | observation contradicts |
+| feasibility | `Empirical`/`Probabilistic` | blocker or threshold |
 
 ## Agents
 
 | Agent | Model | Role | Skills |
 |-------|-------|------|--------|
-| **popper** | opus | Triage: classify claims, determine strategy | capabilities, test-claim |
-| **technician** | sonnet | Validate: check testability with existing tools | capabilities |
-| **claimer** | sonnet | Build: create POC/tests (main workhorse) | build-poc, refine-claim, extract-claims, software-philosophy, python-standards |
-| **falsifier** | opus | Attack: execute tests, render verdicts | ALL project skills |
+| **popper** | opus | Triage: classify into Veritas truth types | refine-claim, test-claim |
+| **technician** | sonnet | Validate: check Veritas testability | (veritas checks) |
+| **claimer** | sonnet | Build: create POC/tests using Veritas | build-poc, refine-claim, extract-claims |
+| **falsifier** | opus | Attack: execute Veritas verification | ALL project skills |
 | **jester** | opus | Reflect: zen insight (read-only) | ALL project skills |
 
 **Important:** Agents are invoked by the orchestrating command (`/test-claim`), not by each other.
 
 ## Verdicts
 
-- **KILLED** — Falsification criteria met
+- **KILLED** — Falsification criteria met (counterexample found)
 - **SURVIVED** — Criteria not met, test valid
-- **UNCERTAIN** — Inconclusive
+- **UNCERTAIN** — Inconclusive (missing evidence, symbolic unresolvable)
 
-## Testability Levels
+## Veritas API
 
-| Level | Meaning | Action |
-|-------|---------|--------|
-| `full` | Type known, tools available | Proceed normally |
-| `partial` | Some tools missing | Proceed with reduced verification |
-| `manual` | No automated tools | Guidance only |
-| `unknown` | Type not in registry | Run extension protocol |
-| `blocked` | Required tool unavailable | Report and ask user |
+```python
+from veritas import Analytic, claim, Verdict
+
+# Define a truth
+truth = Analytic(
+    statement="add(2, 2) equals 4",
+    lhs="result",
+    rhs=4,
+)
+
+# Test with claim() context manager
+with claim(truth) as c:
+    actual = 2 + 2
+    c.bind(result=actual, x=actual)
+
+# Veritas verifies automatically
+assert c.result.verdict == Verdict.SURVIVED
+```
 
 ## Key Principles
 
 1. **Claims must be falsifiable** — Specific enough to be wrong
-2. **State kill criteria before testing** — No moving goalposts
+2. **State falsification form before testing** — No moving goalposts
 3. **Seek the strongest attack** — Try to kill the claim
 4. **Context isolation** — Agents only see what they need
-5. **Capture everything** — Raw observations matter
+5. **Capture everything** — Evidence bindings matter
 6. **Propose multiple strategies** — Claimer MUST offer different testing approaches
 7. **Visible handoffs** — User sees each agent transition
-8. **Registry-based capabilities** — Check testability before execution
+8. **Veritas verification** — Let SymPy evaluate, don't manually determine verdicts

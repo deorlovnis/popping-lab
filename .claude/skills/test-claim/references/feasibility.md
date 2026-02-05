@@ -1,8 +1,10 @@
-# Testing Feasibility Claims
+# Testing Feasibility Claims → Empirical/Probabilistic Verification
 
-Feasibility claims require building something to test if X can work.
+Feasibility claims are tested using **Empirical** (blockers) or **Probabilistic** (thresholds) truths in Veritas.
 
-Kill target: **Show blocker that prevents X from working**
+**Kill targets:**
+- Empirical: Find blocker that prevents X from working
+- Probabilistic: Metric fails to meet threshold
 
 ## Methodology
 
@@ -19,107 +21,204 @@ Use the `build-poc` skill to create the smallest working prototype.
 
 What specific action will test the claim?
 
-| Claim Type | Test Approach |
-|------------|---------------|
-| "Can detect X" | Collect samples, run detection, measure accuracy |
-| "Can predict X" | Split data, train/test, compare to baseline |
-| "Can build X" | Build it, measure if it works |
-| "X is faster" | Benchmark both, compare |
+| Claim Type | Test Approach | Veritas Truth |
+|------------|---------------|---------------|
+| "Can detect X" | Collect samples, run detection | Probabilistic |
+| "Can predict X" | Split data, train/test | Probabilistic |
+| "Can build X" | Build it, check for blockers | Empirical |
+| "X is faster" | Benchmark both, compare | Probabilistic |
 
-### 3. Execute and Observe
+### 3. Execute with Veritas
 
-Run the POC and capture:
-- Exact output/results
-- Error messages
-- Performance metrics
-- Blockers encountered
-- Unexpected behaviors
+**For Blocker Detection:**
 
-### 4. Identify Blockers
-
-What could prove infeasibility?
-- Missing required data/API
-- Fundamental limitation (laws of physics, math)
-- Resource constraints (compute, memory, time)
-- Accuracy below baseline/random
-
-### 5. Compare to Kill Criteria
-
-Go through each criterion:
-- Is blocker found? → KILLED
-- All criteria unmet? → SURVIVED
-- Can't determine? → UNCERTAIN
-
-## Output Format
-
-```yaml
-test:
-  method: "Built POC to test if typing patterns predict stress"
-  code: |
-    import numpy as np
-    from sklearn.linear_model import LogisticRegression
-
-    # Collect typing metrics
-    X = extract_features(typing_samples)
-    y = stress_labels
-
-    # Train and evaluate
-    model = LogisticRegression()
-    model.fit(X_train, y_train)
-    accuracy = model.score(X_test, y_test)
-    print(f"Accuracy: {accuracy:.2%}")
-observations:
-  raw: |
-    Trained on 500 samples
-    Test accuracy: 58%
-    Baseline (random): 50%
-  unexpected: "Signal exists but weak"
-verdict: SURVIVED
-reasoning: "Accuracy 58% > 50% baseline. Signal exists, claim is feasible."
-mutations:
-  - "With more data, accuracy might improve"
-  - "Feature engineering could strengthen signal"
-```
-
-## Feasibility Test Patterns
-
-### Accuracy vs Baseline
 ```python
-accuracy = evaluate(model, test_data)
-baseline = 1.0 / num_classes  # Random chance
-assert accuracy > baseline, f"No better than random: {accuracy}"
+from veritas import Empirical, Verifier
+
+truth = Empirical(
+    statement="Can build typing-based stress predictor",
+    observation_var="blocker",
+    expected_predicate=lambda x: x is None,  # No blocker
+    contradiction_description="Found blocker",
+)
+
+def build_poc():
+    # Attempt to build core mechanism
+    try:
+        # Check data availability
+        if not has_typing_data():
+            return "BLOCKER: No typing data available"
+
+        # Check API availability
+        if not api_accessible():
+            return "BLOCKER: Required API not accessible"
+
+        # Check computational feasibility
+        if training_time > MAX_TIME:
+            return f"BLOCKER: Training takes {training_time}s, max is {MAX_TIME}s"
+
+        return None  # No blocker
+    except Exception as e:
+        return f"BLOCKER: {e}"
+
+blocker = build_poc()
+
+verifier = Verifier()
+result = verifier.verify_with_predicate(truth, blocker, "check_observation")
+
+if result.is_killed():
+    print(f"Infeasible: {blocker}")
+else:
+    print("Feasible: No blockers found")
 ```
+
+**For Threshold Testing:**
+
+```python
+from veritas import Probabilistic, Verifier, Evidence
+
+truth = Probabilistic(
+    statement="Model accuracy > 60%",
+    metric="accuracy",
+    threshold=0.6,
+    direction=">",
+)
+
+# Build and evaluate POC
+model = build_minimal_model()
+accuracy = evaluate(model, test_data)
+
+# Verify threshold
+result = Verifier().verify_with_predicate(
+    truth, accuracy, "check_threshold"
+)
+
+if result.is_survived():
+    print(f"Feasible: accuracy={accuracy:.2%}")
+else:
+    print(f"Infeasible: accuracy={accuracy:.2%} < 60%")
+```
+
+### 4. Compare to Baseline
+
+```python
+from veritas import Probabilistic, Verifier
+
+truth = Probabilistic(
+    statement="Semantic search > keyword search",
+    metric="improvement",
+    threshold=0.0,  # > 0 means improvement
+    direction=">",
+)
+
+# Run both approaches
+keyword_score = run_keyword_search(queries, corpus)
+semantic_score = run_semantic_search(queries, corpus)
+
+improvement = (semantic_score - keyword_score) / keyword_score
+
+result = Verifier().verify_with_predicate(
+    truth, improvement, "check_threshold"
+)
+
+if result.is_survived():
+    print(f"Semantic search is {improvement:.1%} better")
+else:
+    print(f"Semantic search is NOT better (improvement={improvement:.1%})")
+```
+
+### 5. Render Verdict
+
+| Scenario | Verdict |
+|----------|---------|
+| Blocker found | KILLED |
+| Below baseline | KILLED |
+| Threshold not met | KILLED |
+| POC works, threshold met | SURVIVED |
+| Can't complete POC | UNCERTAIN |
+
+## Common Blockers
+
+| Blocker Type | How to Detect | Veritas Pattern |
+|--------------|---------------|-----------------|
+| Data unavailable | API check, file check | Empirical |
+| Below baseline | Compare metrics | Probabilistic |
+| Resource constraint | Measure time/memory | Empirical or Probabilistic |
+| Fundamental limit | Domain knowledge | Empirical |
+| External dependency | Service check | Empirical |
+
+## Testing Patterns
 
 ### API Availability
+
 ```python
-def test_api_exists():
+from veritas import Empirical, Verifier
+import requests
+
+truth = Empirical(
+    statement="Required API is accessible",
+    observation_var="blocker",
+    expected_predicate=lambda x: x is None,
+)
+
+def check_api():
     try:
-        response = requests.get(API_ENDPOINT)
-        assert response.status_code == 200
+        response = requests.get(API_ENDPOINT, timeout=5)
+        if response.status_code != 200:
+            return f"BLOCKER: API returned {response.status_code}"
+        return None
     except Exception as e:
-        raise AssertionError(f"BLOCKER: API unavailable - {e}")
+        return f"BLOCKER: API unavailable - {e}"
+
+blocker = check_api()
+result = Verifier().verify_with_predicate(truth, blocker, "check_observation")
 ```
 
 ### Resource Feasibility
+
 ```python
+from veritas import Probabilistic, Verifier
 import time
+
+truth = Probabilistic(
+    statement="Computation completes in < 60s",
+    metric="time",
+    threshold=60,
+    direction="<",
+)
 
 start = time.time()
 result = heavy_computation()
 elapsed = time.time() - start
 
-assert elapsed < MAX_ACCEPTABLE_TIME, f"BLOCKER: Takes {elapsed}s, max is {MAX_ACCEPTABLE_TIME}s"
+verdict = Verifier().verify_with_predicate(truth, elapsed, "check_threshold")
+
+if verdict.is_killed():
+    print(f"BLOCKER: Takes {elapsed}s, max is 60s")
 ```
 
-## Common Blockers
+### Accuracy vs Random
 
-| Blocker | Example |
-|---------|---------|
-| Data unavailable | API deprecated, no training data |
-| Below baseline | Accuracy ≤ random chance |
-| Resource constraint | Takes days to run, needs GPU |
-| Fundamental limit | Violates physics/math |
-| External dependency | Required service doesn't exist |
+```python
+from veritas import Probabilistic, Verifier
+
+num_classes = 2
+random_baseline = 1.0 / num_classes
+
+truth = Probabilistic(
+    statement="Model better than random",
+    metric="accuracy",
+    threshold=random_baseline,
+    direction=">",
+)
+
+accuracy = evaluate(model, test_data)
+
+result = Verifier().verify_with_predicate(truth, accuracy, "check_threshold")
+
+if result.is_killed():
+    print(f"KILLED: accuracy={accuracy:.2%} <= random={random_baseline:.2%}")
+```
 
 ## Tips
 

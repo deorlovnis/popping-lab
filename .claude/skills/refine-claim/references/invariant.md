@@ -1,6 +1,9 @@
-# Invariant Claim Refinement
+# Invariant Claim Refinement → Modal Truth
 
-Invariant claims test that property P always holds — bounds, constraints, guarantees.
+Invariant claims test that property P always holds. In Veritas, these become **Modal** truths.
+
+**Veritas Type:** `Modal`
+**Falsification Form:** ◇¬P (find state where ¬P)
 
 ## Characteristics
 
@@ -13,7 +16,7 @@ Invariant claims test that property P always holds — bounds, constraints, guar
 
 ### 1. Identify the Invariant
 
-What property must always be true?
+What property P must always be true?
 
 | Vague | Sharp |
 |-------|-------|
@@ -38,41 +41,49 @@ Where might violations occur?
 - Resource exhaustion
 - Time-dependent behavior
 
-### 4. Set Kill Criteria
+### 4. Set Falsification Form
 
-What proves the invariant is broken?
+For Modal: **◇¬P** (possibility of violation)
 
-Kill template: **Find state where ¬P**
+Expressed as: ∃state: ¬P(state)
 
 Examples:
-- "Dies if balance becomes negative"
-- "Dies if latency exceeds 100ms"
-- "Dies if data race detected"
+- "◇(balance < 0) — find state where balance goes negative"
+- "◇(latency > 100ms) — find state exceeding bound"
+- "◇(data_race) — find concurrent state with race"
 
-## Output Template
+## Veritas Output Template
 
-```yaml
-claims:
-  - id: "001"
-    type: invariant
-    statement: "<P> holds under <conditions>"
-    criteria:
-      - "Dies if P violated in state <X>"
-      - "Dies if bound exceeded under <condition>"
-    context:
-      constraints: "<Measurement period, environment>"
-      approach: "Search for states where ¬P"
-      baseline: "<Comparison point if applicable>"
+```python
+from veritas import Modal, sym
+
+# Define the state variable
+balance = sym("balance")
+
+# Create Modal truth
+truth = Modal(
+    statement="balance >= 0 after any transaction",
+    invariant=balance >= 0,
+    state_var="balance",
+)
+
+# Performance bound
+latency = sym("latency")
+truth = Modal(
+    statement="p95 latency < 100ms",
+    invariant=latency < 100,
+    state_var="latency",
+)
 ```
 
 ## Testing Strategies
 
-| Strategy | Method | Tools |
-|----------|--------|-------|
-| Fuzz testing | Random inputs seeking violation | hypothesis |
-| Boundary testing | Test at limits | pytest |
-| SMT solving | Prove no violation exists | z3-solver |
-| Load testing | Stress test for performance bounds | pytest |
+| Strategy | Method | Veritas Pattern |
+|----------|--------|-----------------|
+| Fuzz testing | Random inputs seeking ¬P | hypothesis + Modal |
+| Boundary testing | Test at limits | pytest + Modal |
+| SMT solving | Prove no ¬P exists | z3 + SymPy |
+| Load testing | Stress test bounds | locust + Modal |
 
 ## Common Mistakes
 

@@ -1,6 +1,9 @@
-# Ordering Claim Refinement
+# Ordering Claim Refinement → Analytic Truth
 
-Ordering claims test that X ≤ Y relationship holds — ranking, sorting, precedence.
+Ordering claims test that X ≤ Y relationship holds. In Veritas, these become **Analytic** truths with an ordering predicate.
+
+**Veritas Type:** `Analytic`
+**Falsification Form:** ∃x,y: order(x,y) violated
 
 ## Characteristics
 
@@ -38,40 +41,57 @@ Where might order be violated?
 - At boundaries (empty, single, full)
 - With equal elements (ties)
 
-### 4. Set Kill Criteria
+### 4. Set Falsification Form
 
-What proves ordering is broken?
-
-Kill template: **Find order violation (X > Y when X ≤ Y expected)**
+For Analytic (ordering): **∃i: seq[i] > seq[i+1]** (for ascending)
 
 Examples:
-- "Dies if any result[i] > result[i+1] by relevance"
-- "Dies if item dequeued out of order"
-- "Dies if lower priority executes first"
+- "∃i: results[i].score < results[i+1].score for descending"
+- "∃dequeue: dequeue order ≠ enqueue order"
+- "∃tasks: lower priority executed before higher"
 
-## Output Template
+## Veritas Output Template
 
-```yaml
-claims:
-  - id: "001"
-    type: ordering
-    statement: "<X> ≤ <Y> under <conditions>"
-    criteria:
-      - "Dies if order violated between adjacent elements"
-      - "Dies if transitivity broken"
-    context:
-      constraints: "<Comparison function, stability>"
-      approach: "Verify order after operations"
+```python
+from veritas import Analytic
+
+# Sort verification
+truth = Analytic(
+    statement="list is sorted ascending",
+    lhs="is_sorted",
+    rhs=True,
+)
+
+# FIFO property
+truth = Analytic(
+    statement="dequeue order matches enqueue order",
+    lhs="order_preserved",
+    rhs=True,
+)
+
+# Priority ordering
+truth = Analytic(
+    statement="high priority tasks complete before low priority",
+    lhs="priority_respected",
+    rhs=True,
+)
+
+# Stability (equal elements keep original order)
+truth = Analytic(
+    statement="sort is stable for equal keys",
+    lhs="is_stable",
+    rhs=True,
+)
 ```
 
 ## Testing Strategies
 
-| Strategy | Method | Tools |
-|----------|--------|-------|
-| Comparison tests | Check pairwise order | pytest |
-| Transitivity checks | Verify A<B, B<C → A<C | hypothesis |
-| Stability tests | Equal elements preserve order | pytest |
-| Concurrent tests | Order under race conditions | pytest |
+| Strategy | Method | Veritas Pattern |
+|----------|--------|-----------------|
+| Pairwise comparison | Check adjacent pairs | `claim(Analytic(...))` |
+| Transitivity checks | Verify A<B, B<C → A<C | hypothesis + Analytic |
+| Stability tests | Equal elements preserve order | pytest + Analytic |
+| Concurrent tests | Order under race conditions | threading + Analytic |
 
 ## Common Mistakes
 

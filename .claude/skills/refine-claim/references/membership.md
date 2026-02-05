@@ -1,6 +1,9 @@
-# Membership Claim Refinement
+# Membership Claim Refinement → Analytic Truth
 
-Membership claims test that X belongs to set S — validation, filtering, classification.
+Membership claims test that X belongs to set S. In Veritas, these become **Analytic** truths with a membership predicate.
+
+**Veritas Type:** `Analytic`
+**Falsification Form:** ∃x: x ∉ S (element fails membership test)
 
 ## Characteristics
 
@@ -37,40 +40,57 @@ What elements should be tested?
 - Edge cases (barely in/out)
 - Malformed (wrong type entirely)
 
-### 4. Set Kill Criteria
+### 4. Set Falsification Form
 
-What proves membership is wrong?
-
-Kill template: **Find X ∉ S (element outside expected set)**
+For Analytic (membership): **∃x: is_member(x) ≠ True**
 
 Examples:
-- "Dies if invalid email passes validation"
-- "Dies if unknown role is accepted"
-- "Dies if response missing required field"
+- "∃email: is_valid_email(email) = False for valid input"
+- "∃role: role ∉ {admin, user, guest}"
+- "∃response: 'id' not in response"
 
-## Output Template
+## Veritas Output Template
 
-```yaml
-claims:
-  - id: "001"
-    type: membership
-    statement: "<X> belongs to <S> when <condition>"
-    criteria:
-      - "Dies if X ∉ S for valid input"
-      - "Dies if X ∈ S for invalid input"
-    context:
-      constraints: "<Set definition, schema>"
-      approach: "Test membership for edge cases"
+```python
+from veritas import Analytic
+
+# Enum membership
+truth = Analytic(
+    statement="role is valid (admin, user, or guest)",
+    lhs="is_valid_role",
+    rhs=True,
+)
+
+# Pattern membership
+truth = Analytic(
+    statement="email matches RFC 5322 format",
+    lhs="is_valid_email",
+    rhs=True,
+)
+
+# Schema membership
+truth = Analytic(
+    statement="response has required 'id' field",
+    lhs="has_id_field",
+    rhs=True,
+)
+
+# Range membership
+truth = Analytic(
+    statement="value in range [0, 100]",
+    lhs="in_range",
+    rhs=True,
+)
 ```
 
 ## Testing Strategies
 
-| Strategy | Method | Tools |
-|----------|--------|-------|
-| Validation tests | Check known in/out cases | pytest |
-| Edge case testing | Test boundaries | pytest |
-| Property testing | Generate random elements | hypothesis |
-| Type checking | Static analysis | mypy |
+| Strategy | Method | Veritas Pattern |
+|----------|--------|-----------------|
+| Validation tests | Check known in/out cases | `claim(Analytic(...))` |
+| Edge case testing | Test boundaries | pytest + Analytic |
+| Property testing | Generate random elements | hypothesis + Analytic |
+| Type checking | Static analysis | mypy + Analytic |
 
 ## Common Mistakes
 

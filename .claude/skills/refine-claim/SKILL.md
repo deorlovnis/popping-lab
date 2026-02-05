@@ -1,34 +1,42 @@
 ---
 name: refine-claim
-description: "Sharpen fuzzy ideas into testable, falsifiable claims. Use when claimer needs to transform raw ideas or extract claims from projects. Supports property-based types: equality, invariant, membership, ordering, grounding, feasibility."
+description: "Sharpen fuzzy ideas into testable, falsifiable claims using Veritas truth types. Use when claimer needs to transform raw ideas. Maps to: Analytic, Modal, Empirical, Probabilistic."
 ---
 
 # Refine Claim
 
-Transform fuzzy ideas into sharp, falsifiable claims.
+Transform fuzzy ideas into sharp, falsifiable claims using Veritas truth types.
 
 ## Process
 
-1. Determine claim type (use `scripts/classify.py` if unclear)
+1. Determine truth type from the claim's nature
 2. Load appropriate reference:
-   - `references/equality.md` for comparison claims (X = Y)
-   - `references/invariant.md` for constraint claims (P always holds)
-   - `references/membership.md` for validation claims (X ∈ S)
-   - `references/ordering.md` for ranking claims (X ≤ Y)
-   - `references/grounding.md` for attribution claims (X supported by Y)
-   - `references/feasibility.md` for POC claims (Can X work?)
+   - `references/equality.md` for equality/membership/ordering claims → **Analytic**
+   - `references/invariant.md` for constraint/bounds claims → **Modal**
+   - `references/grounding.md` for attribution/evidence claims → **Empirical**
+   - `references/feasibility.md` for POC/threshold claims → **Empirical** or **Probabilistic**
 3. Follow the refinement process in that reference
+4. Output Veritas truth type with falsification form
 
-## Property Types
+## Veritas Truth Types
 
-| Type | What It Tests | Kill Criteria |
-|------|---------------|---------------|
-| equality | X = Y | Find input where X ≠ Y |
-| invariant | P always holds | Find state where ¬P |
-| membership | X ∈ S | Find X ∉ S |
-| ordering | X ≤ Y | Find order violation |
-| grounding | X supported by Y | Find ungrounded X |
-| feasibility | Can X work? | Show blocker |
+| Truth Type | What It Tests | Falsification Form |
+|------------|---------------|-------------------|
+| **Analytic** | X = Y, X ∈ S, X ≤ Y | ∃x: f(x) ≠ expected |
+| **Modal** | P always holds | ◇¬P (find state where ¬P) |
+| **Empirical** | Observation supports claim | Find contradicting observation |
+| **Probabilistic** | P(X) op threshold | Find metric violating threshold |
+
+## Mapping Old Types → Veritas
+
+| Old Type | Veritas Truth | Rationale |
+|----------|---------------|-----------|
+| equality | `Analytic` | ∃x: f(x) ≠ expected |
+| membership | `Analytic` | ∃x: x ∉ S (element fails predicate) |
+| ordering | `Analytic` | ∃x,y: order(x,y) violated |
+| invariant | `Modal` | ◇¬P (possible violation) |
+| grounding | `Empirical` | observation contradicts support |
+| feasibility | `Empirical`/`Probabilistic` | blocker or threshold violation |
 
 ## Key Principles
 
@@ -39,14 +47,15 @@ A claim must be specific enough to be wrong.
 Bad: "Caching helps performance"
 Good: "Redis caching reduces p95 latency by >40% for read-heavy endpoints"
 
-### Kill Criteria
+### Kill Criteria via Falsification Form
 
-State what would prove the claim false BEFORE testing.
+The falsification form states what would prove the claim false.
 
 Examples:
-- "Dies if X ≠ Y for any tested input"
-- "Dies if invariant P violated in any state"
-- "Dies if element found outside valid set"
+- Analytic: "∃x: add(x, 2) ≠ x + 2"
+- Modal: "◇(balance < 0) — find state where balance negative"
+- Empirical: "Observation shows API returns non-200"
+- Probabilistic: "accuracy ≤ 0.5 — not better than random"
 
 ### Minimum Scope
 
@@ -56,15 +65,43 @@ Find the smallest version that answers the core question.
 - Focus on core hypothesis
 - Time-box the test
 
-## Scripts
+## Output Template
 
-- `scripts/classify.py` — Auto-classify claim type
+```python
+from veritas import Analytic, Modal, Empirical, Probabilistic
+
+# For equality/membership/ordering:
+truth = Analytic(
+    statement="<Clear statement>",
+    lhs="<variable name>",
+    rhs=<expected value>,
+)
+
+# For invariants:
+truth = Modal(
+    statement="<Property always holds>",
+    invariant=<sympy predicate>,
+)
+
+# For grounding/observation:
+truth = Empirical(
+    statement="<Observation-based claim>",
+    observation_var="<what we observe>",
+    expected_predicate=lambda x: <condition>,
+)
+
+# For thresholds:
+truth = Probabilistic(
+    statement="<Metric claim>",
+    metric="<metric name>",
+    threshold=<value>,
+    direction=">",  # or ">=", "<", "<=", "="
+)
+```
 
 ## References
 
-- `references/equality.md` — Equality claim refinement (X = Y)
-- `references/invariant.md` — Invariant claim refinement (P holds)
-- `references/membership.md` — Membership claim refinement (X ∈ S)
-- `references/ordering.md` — Ordering claim refinement (X ≤ Y)
-- `references/grounding.md` — Grounding claim refinement (attribution)
-- `references/feasibility.md` — Feasibility claim refinement (POCs)
+- `references/equality.md` — Equality/membership/ordering → Analytic
+- `references/invariant.md` — Invariants → Modal
+- `references/grounding.md` — Attribution/evidence → Empirical
+- `references/feasibility.md` — POC/thresholds → Empirical/Probabilistic

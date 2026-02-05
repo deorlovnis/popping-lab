@@ -1,6 +1,11 @@
-# Feasibility Claim Refinement
+# Feasibility Claim Refinement → Empirical/Probabilistic Truth
 
-Feasibility claims test whether X can work at all — new ideas, POCs, proof of concept.
+Feasibility claims test whether X can work at all. In Veritas, these become **Empirical** (for blockers) or **Probabilistic** (for thresholds) truths.
+
+**Veritas Types:** `Empirical` or `Probabilistic`
+**Falsification Forms:**
+- Empirical: Observe blocker that prevents X from working
+- Probabilistic: Metric fails to meet threshold
 
 ## Characteristics
 
@@ -37,42 +42,73 @@ What would convince you this works?
 - Compare to baseline: "better than random" or "better than existing"
 - Consider false positives: what looks like success but isn't?
 
-### 4. Define Kill Criteria
+### 4. Choose Truth Type
 
-What would prove this doesn't work?
+**Use Empirical when:**
+- Looking for blockers (API doesn't exist, data unavailable)
+- Success is binary (works/doesn't work)
+- Observation contradicts feasibility
 
-Kill template: **Show blocker that prevents X from working**
+**Use Probabilistic when:**
+- Success has a threshold (accuracy > X)
+- Comparing to baseline
+- Measuring continuous metric
 
-Examples:
-- "Dies if accuracy is at or below random chance (50%)"
-- "Dies if core mechanism produces no measurable signal"
-- "Dies if fundamental assumption is proven false"
-- "Dies if required data/API doesn't exist"
+## Veritas Output Templates
 
-## Output Template
+### For Blocker Detection (Empirical)
 
-```yaml
-claims:
-  - id: "001"
-    type: feasibility
-    statement: "<Clear feasibility question>"
-    criteria:
-      - "Dies if <specific blocker found>"
-      - "Dies if <baseline not exceeded>"
-    context:
-      constraints: "<Time/resource limits, assumptions>"
-      approach: "Build minimal POC that tests core mechanism"
-      success_bar: "<What 'working' looks like>"
+```python
+from veritas import Empirical
+
+truth = Empirical(
+    statement="Can build typing-based stress predictor",
+    observation_var="blocker",
+    expected_predicate=lambda x: x is None,  # No blocker found
+    contradiction_description="Found blocker preventing implementation",
+)
+```
+
+### For Threshold Testing (Probabilistic)
+
+```python
+from veritas import Probabilistic
+
+# Accuracy threshold
+truth = Probabilistic(
+    statement="Model accuracy > 60%",
+    metric="accuracy",
+    threshold=0.6,
+    direction=">",
+)
+
+# Better than baseline
+truth = Probabilistic(
+    statement="Semantic search recall > keyword baseline",
+    metric="recall_improvement",
+    threshold=0.0,  # > 0 means better than baseline
+    direction=">",
+)
 ```
 
 ## Testing Strategies
 
-| Strategy | Method | Tools |
-|----------|--------|-------|
-| POC build | Create minimal implementation | custom |
-| Literature review | Check if already solved/impossible | web search |
-| Expert consult | Get domain knowledge | human |
-| Rapid prototype | Quick and dirty test | pytest |
+| Strategy | Method | Veritas Pattern |
+|----------|--------|-----------------|
+| POC build | Create minimal implementation | Empirical (blocker check) |
+| Accuracy test | Evaluate model | Probabilistic (threshold) |
+| A/B comparison | Compare to baseline | Probabilistic (improvement) |
+| Resource check | Verify feasibility | Empirical (constraint check) |
+
+## Common Blockers
+
+| Blocker Type | Example | Truth Type |
+|--------------|---------|------------|
+| Data unavailable | API deprecated, no training data | Empirical |
+| Below baseline | Accuracy ≤ random chance | Probabilistic |
+| Resource constraint | Takes days to run, needs GPU | Empirical |
+| Fundamental limit | Violates physics/math | Empirical |
+| External dependency | Required service doesn't exist | Empirical |
 
 ## Common Mistakes
 

@@ -1,8 +1,8 @@
-# Testing Membership Claims
+# Testing Membership Claims → Analytic Verification
 
-Membership claims test whether elements belong to expected sets.
+Membership claims are tested using **Analytic** truths in Veritas.
 
-Kill target: **Find X ∉ S (element outside expected set)**
+**Kill target:** ∃x: x ∉ S (find element outside expected set)
 
 ## Methodology
 
@@ -21,44 +21,37 @@ Test both sides of the boundary:
 - **Invalid elements** — Should be rejected
 - **Edge cases** — On the boundary
 
-### 3. Execute Tests
+### 3. Execute with Veritas
 
-**Enum membership:**
 ```python
-VALID_ROLES = {"admin", "user", "guest"}
+from veritas import claim, Analytic, Verdict
 
-def test_role_membership():
-    assert validate_role("admin") == True
-    assert validate_role("superuser") == False  # Not in set
+# Define membership as equality check
+truth = Analytic(
+    statement="role is valid (admin, user, or guest)",
+    lhs="is_valid",
+    rhs=True,
+)
+
+def is_valid_role(role):
+    return role in {"admin", "user", "guest"}
+
+# Test valid case
+with claim(truth) as c:
+    result = is_valid_role("admin")
+    c.bind(is_valid=result, x=result)
+
+assert c.result.verdict == Verdict.SURVIVED
+
+# Test invalid case
+with claim(truth) as c:
+    result = is_valid_role("superuser")
+    c.bind(is_valid=result, x=result)
+
+assert c.result.verdict == Verdict.KILLED  # Found non-member accepted
 ```
 
-**Pattern membership:**
-```python
-import re
-
-EMAIL_PATTERN = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-
-def test_email_membership():
-    assert re.match(EMAIL_PATTERN, "user@example.com")
-    assert not re.match(EMAIL_PATTERN, "not-an-email")
-```
-
-**Schema membership:**
-```python
-def test_response_membership():
-    response = api_call()
-    assert "id" in response  # Required field
-    assert isinstance(response["id"], int)  # Correct type
-```
-
-### 4. Capture Observations
-
-Record:
-- Valid elements correctly accepted
-- Invalid elements correctly rejected
-- Any misclassifications (kills the claim)
-
-### 5. Render Verdict
+### 4. Render Verdict
 
 | Scenario | Verdict |
 |----------|---------|
@@ -66,49 +59,103 @@ Record:
 | Valid element rejected | KILLED |
 | All classifications correct | SURVIVED |
 
-## Output Format
+## Testing Patterns
 
-```yaml
-test:
-  method: "Tested email validation against RFC 5322"
-  code: |
-    valid = ["a@b.com", "user.name@domain.org"]
-    invalid = ["@missing.com", "no-at-sign", "a@.com"]
+### Enum Membership
 
-    for email in valid:
-        assert validate(email), f"False negative: {email}"
-    for email in invalid:
-        assert not validate(email), f"False positive: {email}"
-observations:
-  raw: |
-    Valid emails: all accepted
-    Invalid emails: "a@.com" was incorrectly accepted
-  unexpected: "Domain starting with dot passes validation"
-verdict: KILLED
-reasoning: "Invalid email 'a@.com' was accepted (X ∉ S accepted as member)"
+```python
+from veritas import claim, Analytic
+
+VALID_ROLES = {"admin", "user", "guest"}
+
+truth = Analytic(
+    statement="role is in valid set",
+    lhs="is_member",
+    rhs=True,
+)
+
+def test_role_membership():
+    # Test valid
+    with claim(truth) as c:
+        c.bind(is_member="admin" in VALID_ROLES, x=True)
+    assert c.result.verdict == Verdict.SURVIVED
+
+    # Test invalid
+    with claim(truth) as c:
+        c.bind(is_member="superuser" in VALID_ROLES, x=False)
+    assert c.result.verdict == Verdict.KILLED
 ```
 
-## Membership Testing Patterns
+### Pattern Membership
 
-### Type Checking
 ```python
-assert isinstance(value, expected_type)
+from veritas import claim, Analytic
+import re
+
+EMAIL_PATTERN = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+truth = Analytic(
+    statement="email matches valid pattern",
+    lhs="is_valid",
+    rhs=True,
+)
+
+def test_email_membership():
+    valid_emails = ["user@example.com", "test.name@domain.org"]
+    invalid_emails = ["@missing.com", "no-at-sign", "a@.com"]
+
+    for email in valid_emails:
+        with claim(truth) as c:
+            c.bind(is_valid=bool(re.match(EMAIL_PATTERN, email)), x=True)
+        assert c.result.verdict == Verdict.SURVIVED, f"Valid rejected: {email}"
+
+    for email in invalid_emails:
+        with claim(truth) as c:
+            c.bind(is_valid=bool(re.match(EMAIL_PATTERN, email)), x=True)
+        # Expect KILLED because invalid emails should NOT match
 ```
 
-### Enum Validation
+### Schema Membership
+
 ```python
-from enum import Enum
+from veritas import claim, Analytic
 
-class Role(Enum):
-    ADMIN = "admin"
-    USER = "user"
+truth = Analytic(
+    statement="response has required 'id' field",
+    lhs="has_id",
+    rhs=True,
+)
 
-assert role in Role.__members__
+with claim(truth) as c:
+    response = api_call()
+    has_id = "id" in response and isinstance(response["id"], int)
+    c.bind(has_id=has_id, x=has_id)
 ```
 
 ### Range Membership
+
 ```python
-assert 0 <= value <= 100, "Value out of range [0, 100]"
+from veritas import claim, Analytic
+
+truth = Analytic(
+    statement="value in range [0, 100]",
+    lhs="in_range",
+    rhs=True,
+)
+
+def test_range_membership():
+    test_cases = [
+        (50, True),   # In range
+        (0, True),    # Lower bound
+        (100, True),  # Upper bound
+        (-1, False),  # Below range
+        (101, False), # Above range
+    ]
+
+    for value, expected in test_cases:
+        with claim(truth) as c:
+            in_range = 0 <= value <= 100
+            c.bind(in_range=in_range, x=in_range)
 ```
 
 ## Tips

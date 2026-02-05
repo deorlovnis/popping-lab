@@ -1,13 +1,21 @@
-# Equality Claim Refinement
+# Equality Claim Refinement → Analytic Truth
 
-Equality claims test that X equals Y — comparisons, return values, expected outputs.
+Equality claims test that X equals Y. In Veritas, these become **Analytic** truths.
+
+**Veritas Type:** `Analytic`
+**Falsification Form:** ∃x: f(x) ≠ expected
+
+## Also Covers
+
+- **Membership:** X ∈ S → Analytic with set predicate
+- **Ordering:** X ≤ Y → Analytic with comparison predicate
 
 ## Characteristics
 
 - Specific input → expected output
 - Deterministic (same input = same result)
 - Direct comparison possible
-- Can write assertion that passes/fails
+- Single counterexample kills the claim
 
 ## Refinement Process
 
@@ -24,9 +32,9 @@ What two things are being compared?
 ### 2. Specify Both Sides
 
 Be explicit about:
-- Left side: actual result (function call, API response, output)
-- Right side: expected value (literal, computed, schema)
-- Comparison method (==, deep equals, schema match)
+- Left side (lhs): variable name for actual result
+- Right side (rhs): expected value
+- Comparison semantics (exact match, approximate, structural)
 
 ### 3. Define Test Inputs
 
@@ -34,41 +42,50 @@ What inputs will be tested?
 - Happy path inputs
 - Edge cases (empty, null, max)
 - Boundary values
-- Invalid inputs (if applicable)
 
-### 4. Set Kill Criteria
+### 4. Set Falsification Form
 
-What proves equality is broken?
-
-Kill template: **Find input where X ≠ Y**
+For Analytic: **∃x: lhs ≠ rhs**
 
 Examples:
-- "Dies if status code is not 200"
-- "Dies if output differs from expected"
-- "Dies if any test case shows inequality"
+- "∃x: add(x, 2) ≠ x + 2"
+- "∃x: status_code ≠ 200"
+- "∃input: parse(input) ≠ expected"
 
-## Output Template
+## Veritas Output Template
 
-```yaml
-claims:
-  - id: "001"
-    type: equality
-    statement: "<X> equals <Y> when <condition>"
-    criteria:
-      - "Dies if X ≠ Y for input <case>"
-      - "Dies if comparison fails on edge case"
-    context:
-      constraints: "<Test environment, setup>"
-      approach: "Call <X>, compare to <Y>"
+```python
+from veritas import Analytic
+
+# Simple equality
+truth = Analytic(
+    statement="add(2, 2) equals 4",
+    lhs="result",  # variable name for actual
+    rhs=4,         # expected value
+)
+
+# Membership as equality
+truth = Analytic(
+    statement="email is valid RFC 5322",
+    lhs="is_valid",
+    rhs=True,
+)
+
+# Ordering as equality
+truth = Analytic(
+    statement="list is sorted ascending",
+    lhs="is_sorted",
+    rhs=True,
+)
 ```
 
 ## Testing Strategies
 
-| Strategy | Method | Tools |
-|----------|--------|-------|
-| Unit test | Assert X == Y | pytest |
-| Property test | For all inputs, X == Y | hypothesis |
-| Formal proof | Prove X = Y algebraically | sympy, z3 |
+| Strategy | Method | Veritas Pattern |
+|----------|--------|-----------------|
+| Unit test | Assert X == Y | `claim(Analytic(...))` |
+| Property test | For all inputs, X == Y | hypothesis + Analytic |
+| Formal proof | Prove X = Y | SymPy simplification |
 
 ## Common Mistakes
 
