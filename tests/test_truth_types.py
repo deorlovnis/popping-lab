@@ -86,10 +86,8 @@ class TestAnalytic:
         t = Analytic(statement="2+2=4", lhs="result", rhs=4)
         form = t.falsify()
         # If result=4, then result≠4 is False (claim survives)
-        # Note: The quantified form may return None due to SymPy limitations
-        # Use direct verification for concrete checks
-        result = form.check(x=4, result=4)
-        assert result in (False, None)  # May be None due to quantifier
+        result = form.check(result=4)
+        assert result is False
 
     def test_repr(self) -> None:
         """__repr__ returns useful string."""
@@ -113,7 +111,7 @@ class TestModal:
         form = t.falsify()
         assert isinstance(form, FalsificationForm)
         # Should seek ¬(x >= 0), i.e., x < 0
-        assert "state" in str(form.free_symbols)
+        assert sym("x") in form.free_symbols
 
     def test_repr(self) -> None:
         """__repr__ returns useful string."""

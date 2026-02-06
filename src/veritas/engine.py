@@ -125,66 +125,6 @@ class Verifier:
         # Cannot determine
         return None
 
-    def _evaluate_falsification_directly(
-        self, truth: Any, evidence: Evidence
-    ) -> bool | None:
-        """Directly evaluate falsification without going through symbolic formulas.
-
-        For Analytic truths, we check if lhs != rhs.
-        This bypasses SymPy quantifier issues.
-
-        Args:
-            truth: The truth being verified
-            evidence: Evidence with bindings
-
-        Returns:
-            True if falsification condition is met (claim KILLED)
-            False if not met (claim SURVIVED)
-            None if cannot determine
-        """
-        from .truth import Analytic, Modal
-
-        if isinstance(truth, Analytic):
-            # Get the actual value from evidence
-            lhs_name = truth.lhs if isinstance(truth.lhs, str) else str(truth.lhs)
-            if lhs_name in evidence.bindings:
-                actual = evidence.bindings[lhs_name]
-                expected = truth.rhs
-                # Falsification: actual != expected
-                try:
-                    if actual != expected:
-                        return True  # KILLED: found inequality
-                    else:
-                        return False  # SURVIVED: equality holds
-                except (TypeError, ValueError):
-                    return None
-
-        if isinstance(truth, Modal):
-            # For Modal, we need to check if the invariant is violated
-            state_val = evidence.bindings.get(truth.state_var)
-            if state_val is not None:
-                # Substitute the state value into the invariant
-                invariant = truth.invariant
-                state_sym = sym(truth.state_var)
-                substituted = invariant.subs(state_sym, state_val)
-                simplified = sp.simplify(substituted)
-
-                if simplified is sp.false or simplified == False:  # noqa: E712
-                    return True  # KILLED: invariant violated
-                if simplified is sp.true or simplified == True:  # noqa: E712
-                    return False  # SURVIVED: invariant holds
-
-                # Try to evaluate numerically
-                try:
-                    if bool(simplified):
-                        return False  # Invariant holds
-                    else:
-                        return True  # Invariant violated
-                except (TypeError, ValueError):
-                    return None
-
-        return None
-
     def verify(self, truth: Truth, evidence: Evidence) -> VerdictResult:
         """Perform complete verification of a truth against evidence.
 
@@ -228,19 +168,7 @@ class Verifier:
             result.add_trace(f"Cannot evaluate: missing {missing}")
             return result
 
-        # Step 3: Try direct evaluation first (bypasses quantifier issues)
-        direct_result = self._evaluate_falsification_directly(truth, evidence)
-        if direct_result is not None:
-            result.add_trace(f"Direct evaluation result: {direct_result}")
-            if direct_result is True:
-                result.verdict = Verdict.KILLED
-                result.reasoning = f"Falsification condition met: {form.description}"
-            else:
-                result.verdict = Verdict.SURVIVED
-                result.reasoning = "Falsification condition not met with given evidence"
-            return result
-
-        # Step 4: Fall back to symbolic evaluation
+        # Step 3: Symbolic evaluation
         substituted = self.substitute(form, evidence)
         result.add_trace(f"Substituted formula: {substituted}")
 

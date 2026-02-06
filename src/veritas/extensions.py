@@ -74,7 +74,7 @@ class DomainTruth(ABC):
 
 
 @dataclass
-class HTTPResponse:
+class HTTPResponse(DomainTruth):
     """Domain truth for HTTP response assertions.
 
     Tests that an HTTP endpoint returns the expected status code.
@@ -115,7 +115,7 @@ class HTTPResponse:
 
 
 @dataclass
-class ModelAccuracy:
+class ModelAccuracy(DomainTruth):
     """Domain truth for ML model accuracy claims.
 
     Tests that a model achieves at least a threshold accuracy.
@@ -156,7 +156,7 @@ class ModelAccuracy:
 
 
 @dataclass
-class InvariantCheck:
+class InvariantCheck(DomainTruth):
     """Domain truth for state invariant assertions.
 
     Tests that a property holds after operations.
@@ -194,7 +194,7 @@ class InvariantCheck:
 
 
 @dataclass
-class DataGrounding:
+class DataGrounding(DomainTruth):
     """Domain truth for data grounding claims.
 
     Tests that a claim has supporting evidence/documentation.

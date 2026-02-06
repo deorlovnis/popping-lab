@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import sympy as sp
 
-from .symbolic import eq, exists, ne, negate, sym
+from .symbolic import eq, ne, negate, sym
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -136,15 +136,13 @@ class Analytic:
             FalsificationForm where satisfaction means finding inequality.
         """
         lhs = sym(self.lhs) if isinstance(self.lhs, str) else self.lhs
-        var = sym(self.var_name)
 
-        # Falsification form: ∃x: f(x) ≠ expected
-        inequality = ne(lhs, self.rhs)
-        formula = exists(var, inequality)
+        # Falsification form: lhs ≠ rhs
+        formula = ne(lhs, self.rhs)
 
         return FalsificationForm(
             formula=formula,
-            free_symbols=frozenset({var}),
+            free_symbols=frozenset(formula.free_symbols),
             description=f"Find {self.var_name} where {lhs} ≠ {self.rhs}",
         )
 
@@ -185,16 +183,12 @@ class Modal:
         Returns:
             FalsificationForm where satisfaction means finding a violation.
         """
-        var = sym(self.state_var)
-
-        # Falsification: find state where invariant is violated
-        violation = negate(self.invariant)
-        # ◇¬P represented as ∃state: ¬P(state)
-        formula = exists(var, violation)
+        # Falsification: ¬P (invariant violated)
+        formula = negate(self.invariant)
 
         return FalsificationForm(
             formula=formula,
-            free_symbols=frozenset({var}),
+            free_symbols=frozenset(formula.free_symbols),
             description=f"Find {self.state_var} where ¬({self.invariant})",
         )
 
@@ -242,14 +236,13 @@ class Empirical:
         var = sym(self.observation_var)
 
         # Create a symbolic contradiction predicate
-        contradiction = sp.Function("Contradicts")(var)
-        formula = exists(var, contradiction)
+        formula = sp.Function("Contradicts")(var)
 
         desc = self.contradiction_description or f"Find {self.observation_var} that contradicts claim"
 
         return FalsificationForm(
             formula=formula,
-            free_symbols=frozenset({var}),
+            free_symbols=frozenset(formula.free_symbols),
             description=desc,
         )
 
@@ -319,13 +312,12 @@ class Probabilistic:
         else:  # "="
             expected = eq(var, self.threshold)
 
-        # Falsification is finding observation that violates
-        violation = negate(expected)
-        formula = exists(var, violation)
+        # Falsification: ¬(metric op threshold)
+        formula = negate(expected)
 
         return FalsificationForm(
             formula=formula,
-            free_symbols=frozenset({var}),
+            free_symbols=frozenset(formula.free_symbols),
             description=f"Find {self.metric} where ¬({self.metric} {self.direction} {self.threshold})",
         )
 
