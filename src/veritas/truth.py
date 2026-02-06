@@ -16,8 +16,6 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import sympy as sp
 
-from .symbolic import eq, ne, negate, sym
-
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -84,7 +82,7 @@ class FalsificationForm:
         """
         substituted = self.formula
         for name, value in bindings.items():
-            symbol = sym(name)
+            symbol = sp.Symbol(name)
             substituted = substituted.subs(symbol, value)
 
         simplified = sp.simplify(substituted)
@@ -135,10 +133,10 @@ class Analytic:
         Returns:
             FalsificationForm where satisfaction means finding inequality.
         """
-        lhs = sym(self.lhs) if isinstance(self.lhs, str) else self.lhs
+        lhs = sp.Symbol(self.lhs) if isinstance(self.lhs, str) else self.lhs
 
         # Falsification form: lhs ≠ rhs
-        formula = ne(lhs, self.rhs)
+        formula = sp.Ne(lhs, self.rhs)
 
         return FalsificationForm(
             formula=formula,
@@ -184,7 +182,7 @@ class Modal:
             FalsificationForm where satisfaction means finding a violation.
         """
         # Falsification: ¬P (invariant violated)
-        formula = negate(self.invariant)
+        formula = sp.Not(self.invariant)
 
         return FalsificationForm(
             formula=formula,
@@ -233,7 +231,7 @@ class Empirical:
         Returns:
             FalsificationForm where satisfaction means finding contradiction.
         """
-        var = sym(self.observation_var)
+        var = sp.Symbol(self.observation_var)
 
         # Create a symbolic contradiction predicate
         formula = sp.Function("Contradicts")(var)
@@ -298,7 +296,7 @@ class Probabilistic:
         Returns:
             FalsificationForm where satisfaction means threshold violation.
         """
-        var = sym(self.metric)
+        var = sp.Symbol(self.metric)
 
         # Construct the expected condition
         if self.direction == ">":
@@ -310,10 +308,10 @@ class Probabilistic:
         elif self.direction == "<=":
             expected = var <= self.threshold
         else:  # "="
-            expected = eq(var, self.threshold)
+            expected = sp.Eq(var, self.threshold)
 
         # Falsification: ¬(metric op threshold)
-        formula = negate(expected)
+        formula = sp.Not(expected)
 
         return FalsificationForm(
             formula=formula,

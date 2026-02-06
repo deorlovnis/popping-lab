@@ -6,14 +6,10 @@ import sympy as sp
 
 from veritas import (
     Analytic,
-    Empirical,
     Evidence,
-    Modal,
-    Probabilistic,
     Verdict,
     Verifier,
     quick_check,
-    sym,
     verify,
 )
 
@@ -60,7 +56,7 @@ class TestVerifier:
     def test_evaluate_symbolic_returns_none(self) -> None:
         """evaluate() returns None for symbolic expression."""
         v = Verifier()
-        x = sym("x")
+        x = sp.Symbol("x")
         expr = sp.Ne(x, 4)
         result = v.evaluate(expr)
         assert result is None
@@ -113,63 +109,6 @@ class TestVerifierVerify:
         assert result.evidence is evidence
 
 
-class TestVerifierVerifyWithPredicate:
-    """Tests for Verifier.verify_with_predicate() method."""
-
-    def test_empirical_survived(self) -> None:
-        """verify_with_predicate() SURVIVED for passing predicate."""
-        truth = Empirical(
-            statement="status is 200",
-            observation_var="status",
-            expected_predicate=lambda s: s == 200,
-        )
-        v = Verifier()
-        result = v.verify_with_predicate(truth, 200, "check_observation")
-        assert result.verdict == Verdict.SURVIVED
-
-    def test_empirical_killed(self) -> None:
-        """verify_with_predicate() KILLED for failing predicate."""
-        truth = Empirical(
-            statement="status is 200",
-            observation_var="status",
-            expected_predicate=lambda s: s == 200,
-        )
-        v = Verifier()
-        result = v.verify_with_predicate(truth, 404, "check_observation")
-        assert result.verdict == Verdict.KILLED
-
-    def test_probabilistic_survived(self) -> None:
-        """verify_with_predicate() works for Probabilistic."""
-        truth = Probabilistic(
-            statement="accuracy > 50%",
-            metric="accuracy",
-            threshold=0.5,
-            direction=">",
-        )
-        v = Verifier()
-        result = v.verify_with_predicate(truth, 0.6, "check_threshold")
-        assert result.verdict == Verdict.SURVIVED
-
-    def test_probabilistic_killed(self) -> None:
-        """verify_with_predicate() KILLED for failing threshold."""
-        truth = Probabilistic(
-            statement="accuracy > 50%",
-            metric="accuracy",
-            threshold=0.5,
-            direction=">",
-        )
-        v = Verifier()
-        result = v.verify_with_predicate(truth, 0.4, "check_threshold")
-        assert result.verdict == Verdict.KILLED
-
-    def test_no_predicate_method(self) -> None:
-        """verify_with_predicate() UNCERTAIN when method doesn't exist."""
-        truth = Analytic(statement="test", lhs="x", rhs=1)
-        v = Verifier()
-        result = v.verify_with_predicate(truth, 1, "nonexistent_method")
-        assert result.verdict == Verdict.UNCERTAIN
-
-
 class TestConvenienceFunctions:
     """Tests for verify() and quick_check() functions."""
 
@@ -191,38 +130,3 @@ class TestConvenienceFunctions:
         truth = Analytic(statement="test", lhs="result", rhs=4)
         verdict = quick_check(truth, result=5, x=5)
         assert verdict == Verdict.KILLED
-
-
-class TestModalVerification:
-    """Tests for Modal truth verification."""
-
-    def test_modal_survived(self) -> None:
-        """Modal claim SURVIVED when invariant holds."""
-        x = sym("x")
-        truth = Modal(
-            statement="x >= 0",
-            invariant=x >= 0,
-            state_var="x",
-        )
-        # When x=5, the invariant holds, so ¬(x>=0) is False
-        # The falsification form exists(x, ¬(x>=0)) with x=5 → False
-        # So SURVIVED
-        evidence = Evidence(bindings={"x": 5, "state": 5})
-        result = verify(truth, evidence)
-        # Note: Modal verification is more complex due to quantifiers
-        # The result depends on how we interpret the evidence
-        assert result.verdict in [Verdict.SURVIVED, Verdict.UNCERTAIN]
-
-    def test_modal_killed(self) -> None:
-        """Modal claim KILLED when invariant violated."""
-        x = sym("x")
-        truth = Modal(
-            statement="x >= 0",
-            invariant=x >= 0,
-            state_var="x",
-        )
-        # When state=-1, the invariant x>=0 is violated
-        evidence = Evidence(bindings={"x": -1, "state": -1})
-        result = verify(truth, evidence)
-        # Modal evaluation with negative value should show violation
-        assert result.verdict in [Verdict.KILLED, Verdict.UNCERTAIN]

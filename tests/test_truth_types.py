@@ -11,8 +11,6 @@ from veritas import (
     Modal,
     Probabilistic,
     Truth,
-    ne,
-    sym,
 )
 
 
@@ -26,7 +24,7 @@ class TestTruthProtocol:
 
     def test_modal_is_truth(self) -> None:
         """Modal implements Truth protocol."""
-        t = Modal(statement="test", invariant=sym("x") >= 0)
+        t = Modal(statement="test", invariant=sp.Symbol("x") >= 0)
         assert isinstance(t, Truth)
 
     def test_empirical_is_truth(self) -> None:
@@ -46,8 +44,8 @@ class TestFalsificationForm:
     def test_check_with_true_binding(self) -> None:
         """check() returns True when falsification condition is met."""
         form = FalsificationForm(
-            formula=ne(sym("x"), 4),
-            free_symbols=frozenset({sym("x")}),
+            formula=sp.Ne(sp.Symbol("x"), 4),
+            free_symbols=frozenset({sp.Symbol("x")}),
             description="Find x where x ≠ 4",
         )
         # x=5 means x≠4 is True (falsification condition met)
@@ -57,8 +55,8 @@ class TestFalsificationForm:
     def test_check_with_false_binding(self) -> None:
         """check() returns False when falsification condition not met."""
         form = FalsificationForm(
-            formula=ne(sym("x"), 4),
-            free_symbols=frozenset({sym("x")}),
+            formula=sp.Ne(sp.Symbol("x"), 4),
+            free_symbols=frozenset({sp.Symbol("x")}),
             description="Find x where x ≠ 4",
         )
         # x=4 means x≠4 is False (falsification condition not met)
@@ -101,21 +99,21 @@ class TestModal:
 
     def test_statement_property(self) -> None:
         """statement property returns the claim statement."""
-        t = Modal(statement="x >= 0 always", invariant=sym("x") >= 0)
+        t = Modal(statement="x >= 0 always", invariant=sp.Symbol("x") >= 0)
         assert t.statement == "x >= 0 always"
 
     def test_falsify_creates_form(self) -> None:
         """falsify() creates a FalsificationForm for invariant violation."""
-        x = sym("x")
+        x = sp.Symbol("x")
         t = Modal(statement="x >= 0", invariant=x >= 0)
         form = t.falsify()
         assert isinstance(form, FalsificationForm)
         # Should seek ¬(x >= 0), i.e., x < 0
-        assert sym("x") in form.free_symbols
+        assert sp.Symbol("x") in form.free_symbols
 
     def test_repr(self) -> None:
         """__repr__ returns useful string."""
-        t = Modal(statement="test", invariant=sym("x") >= 0)
+        t = Modal(statement="test", invariant=sp.Symbol("x") >= 0)
         assert "Modal" in repr(t)
 
 

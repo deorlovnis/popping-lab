@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any
 
 import sympy as sp
 
-from .symbolic import sym
 
 if TYPE_CHECKING:
     from .truth import FalsificationForm
@@ -66,23 +65,7 @@ class Evidence:
         Returns:
             Dict mapping SymPy Symbols to their bound values.
         """
-        return {sym(name): value for name, value in self.bindings.items()}
-
-    def get(self, name: str, default: Any = None) -> Any:
-        """Get a binding value by name.
-
-        Args:
-            name: Variable name
-            default: Default if not found
-
-        Returns:
-            The bound value or default.
-        """
-        return self.bindings.get(name, default)
-
-    def __contains__(self, name: str) -> bool:
-        """Check if a variable is bound."""
-        return name in self.bindings
+        return {sp.Symbol(name): value for name, value in self.bindings.items()}
 
 
 @dataclass
@@ -111,43 +94,9 @@ class VerdictResult:
     reasoning: str = ""
     """Human-readable explanation of why this verdict was reached."""
 
-    mutations: list[str] = field(default_factory=list)
-    """New claims that emerged from this test."""
-
-    def is_killed(self) -> bool:
-        """Check if the claim was killed."""
-        return self.verdict == Verdict.KILLED
-
-    def is_survived(self) -> bool:
-        """Check if the claim survived."""
-        return self.verdict == Verdict.SURVIVED
-
-    def is_uncertain(self) -> bool:
-        """Check if the result is uncertain."""
-        return self.verdict == Verdict.UNCERTAIN
-
     def add_trace(self, step: str) -> None:
         """Add a step to the trace."""
         self.trace.append(step)
-
-    def add_mutation(self, mutation: str) -> None:
-        """Add a mutation (new claim) that emerged."""
-        self.mutations.append(mutation)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for serialization.
-
-        Returns:
-            Dictionary representation of the result.
-        """
-        return {
-            "verdict": str(self.verdict),
-            "reasoning": self.reasoning,
-            "trace": self.trace,
-            "mutations": self.mutations,
-            "evidence": self.evidence.bindings if self.evidence else None,
-            "form_description": self.form.description if self.form else None,
-        }
 
     def __str__(self) -> str:
         """Human-readable string representation."""
@@ -156,6 +105,4 @@ class VerdictResult:
             lines.append(f"Reasoning: {self.reasoning}")
         if self.evidence and self.evidence.bindings:
             lines.append(f"Evidence: {self.evidence.bindings}")
-        if self.mutations:
-            lines.append(f"Mutations: {self.mutations}")
         return "\n".join(lines)

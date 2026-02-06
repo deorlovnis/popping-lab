@@ -51,21 +51,8 @@ from .extensions import (
     InvariantCheck,
     ModelAccuracy,
 )
-from .symbolic import (
-    and_,
-    eq,
-    exists,
-    forall,
-    implies,
-    ne,
-    negate,
-    or_,
-    simplify_verdict,
-    sym,
-)
 from .testing import (
     ClaimContext,
-    TestCase,
     claim,
     empirical,
     equality,
@@ -91,21 +78,9 @@ __all__ = [
     "Verifier",
     "verify",
     "quick_check",
-    # Symbolic
-    "sym",
-    "eq",
-    "ne",
-    "forall",
-    "exists",
-    "implies",
-    "negate",
-    "and_",
-    "or_",
-    "simplify_verdict",
     # Testing API
     "claim",
     "verified",
-    "TestCase",
     "ClaimContext",
     "equality",
     "invariant",

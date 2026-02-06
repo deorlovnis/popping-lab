@@ -2,7 +2,6 @@
 
 This module provides a pytest-friendly API for using Veritas:
 - @verified decorator for test functions
-- TestCase protocol for structured tests
 - claim() context manager for inline verification
 """
 
@@ -11,39 +10,13 @@ from __future__ import annotations
 import functools
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generator, Protocol, TypeVar
+from typing import Any, Callable, Generator, TypeVar
 
 from .engine import Verifier
 from .evidence import Evidence, Verdict, VerdictResult
 from .truth import Analytic, Empirical, Modal, Probabilistic, Truth
 
-if TYPE_CHECKING:
-    pass
-
 F = TypeVar("F", bound=Callable[..., Any])
-
-
-class TestCase(Protocol):
-    """Protocol for a Veritas test case.
-
-    A TestCase provides a structured way to define a test with:
-    - A truth to verify
-    - A method to gather evidence
-    - A method to execute the full test
-    """
-
-    @property
-    def truth(self) -> Truth:
-        """The truth being tested."""
-        ...
-
-    def gather_evidence(self) -> Evidence:
-        """Gather evidence for verification."""
-        ...
-
-    def execute(self) -> VerdictResult:
-        """Execute the test and return a result."""
-        ...
 
 
 @dataclass

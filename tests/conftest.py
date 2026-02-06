@@ -11,26 +11,25 @@ from veritas import (
     Evidence,
     Modal,
     Probabilistic,
-    sym,
 )
 
 
 @pytest.fixture
 def x() -> sp.Symbol:
     """A reusable symbol 'x'."""
-    return sym("x")
+    return sp.Symbol("x")
 
 
 @pytest.fixture
 def y() -> sp.Symbol:
     """A reusable symbol 'y'."""
-    return sym("y")
+    return sp.Symbol("y")
 
 
 @pytest.fixture
 def result() -> sp.Symbol:
     """A reusable symbol 'result'."""
-    return sym("result")
+    return sp.Symbol("result")
 
 
 @pytest.fixture

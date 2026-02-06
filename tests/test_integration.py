@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sympy as sp
+
 from veritas import (
     Analytic,
     Empirical,
@@ -14,7 +16,6 @@ from veritas import (
     equality,
     invariant,
     probabilistic,
-    sym,
     verified,
     verify,
 )
@@ -135,7 +136,7 @@ class TestBuilderFunctions:
 
     def test_invariant_builder(self) -> None:
         """invariant() creates Modal truth."""
-        x = sym("x")
+        x = sp.Symbol("x")
         t = invariant("x >= 0", predicate=x >= 0)
         assert isinstance(t, Modal)
 

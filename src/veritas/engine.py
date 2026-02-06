@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any
 import sympy as sp
 
 from .evidence import Evidence, Verdict, VerdictResult
-from .symbolic import sym
 
 if TYPE_CHECKING:
     from .truth import FalsificationForm, Truth
