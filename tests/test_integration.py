@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sympy as sp
-
 from veritas import (
     Analytic,
     Empirical,
@@ -12,12 +10,8 @@ from veritas import (
     Probabilistic,
     Verdict,
     claim,
-    empirical,
-    equality,
-    invariant,
-    probabilistic,
+    falsify,
     verified,
-    verify,
 )
 from veritas.extensions import (
     DataGrounding,
@@ -47,7 +41,7 @@ class TestAnalyticWorkflow:
         )
 
         # Verify
-        result = verify(truth, evidence)
+        result = falsify(truth, evidence)
         assert result.verdict == Verdict.SURVIVED
         assert len(result.trace) > 0
 
@@ -65,7 +59,7 @@ class TestAnalyticWorkflow:
             bindings={"result": buggy_result, "x": buggy_result},
         )
 
-        result = verify(truth, evidence)
+        result = falsify(truth, evidence)
         assert result.verdict == Verdict.KILLED
 
 
@@ -123,32 +117,6 @@ class TestVerifiedDecorator:
 
         result = test_multiply()
         assert result.verdict == Verdict.SURVIVED
-
-
-class TestBuilderFunctions:
-    """Tests for convenience builder functions."""
-
-    def test_equality_builder(self) -> None:
-        """equality() creates Analytic truth."""
-        t = equality("2+2=4", lhs="result", rhs=4)
-        assert isinstance(t, Analytic)
-        assert t.rhs == 4
-
-    def test_invariant_builder(self) -> None:
-        """invariant() creates Modal truth."""
-        x = sp.Symbol("x")
-        t = invariant("x >= 0", predicate=x >= 0)
-        assert isinstance(t, Modal)
-
-    def test_empirical_builder(self) -> None:
-        """empirical() creates Empirical truth."""
-        t = empirical("API works", observation_var="status", expected=lambda s: s == 200)
-        assert isinstance(t, Empirical)
-
-    def test_probabilistic_builder(self) -> None:
-        """probabilistic() creates Probabilistic truth."""
-        t = probabilistic("accuracy > 50%", metric="acc", threshold=0.5, direction=">")
-        assert isinstance(t, Probabilistic)
 
 
 class TestEmpiricalWorkflow:
@@ -256,7 +224,7 @@ class TestEndToEndScenarios:
         """Test a claim about a math function."""
         import math
 
-        with claim(equality("sqrt(16) = 4", lhs="result", rhs=4.0)) as c:
+        with claim(Analytic("sqrt(16) = 4", lhs="result", rhs=4.0)) as c:
             result = math.sqrt(16)
             c.bind(result=result, x=result)
 
@@ -266,7 +234,7 @@ class TestEndToEndScenarios:
     def test_string_operation_claim(self) -> None:
         """Test a claim about string operations."""
         # Use boolean equality check since strings can't be SymPy symbols
-        with claim(equality("upper('hello') = 'HELLO'", lhs="result", rhs=True)) as c:
+        with claim(Analytic("upper('hello') = 'HELLO'", lhs="result", rhs=True)) as c:
             result = "hello".upper() == "HELLO"
             c.bind(result=result, x=result)
 
@@ -275,7 +243,7 @@ class TestEndToEndScenarios:
 
     def test_list_membership_claim(self) -> None:
         """Test a membership-style claim."""
-        with claim(equality("3 in [1,2,3] is True", lhs="result", rhs=True)) as c:
+        with claim(Analytic("3 in [1,2,3] is True", lhs="result", rhs=True)) as c:
             result = 3 in [1, 2, 3]
             c.bind(result=result, x=result)
 
@@ -284,7 +252,7 @@ class TestEndToEndScenarios:
 
     def test_ordering_claim(self) -> None:
         """Test an ordering claim via equality."""
-        with claim(equality("sorted list is sorted", lhs="result", rhs=True)) as c:
+        with claim(Analytic("sorted list is sorted", lhs="result", rhs=True)) as c:
             data = [3, 1, 4, 1, 5]
             sorted_data = sorted(data)
             is_sorted = all(sorted_data[i] <= sorted_data[i + 1] for i in range(len(sorted_data) - 1))
