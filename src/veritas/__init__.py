@@ -13,7 +13,7 @@ Claims are represented as Truth types, each with a specific falsification form.
 ## Quick Start
 
 ```python
-from veritas import Analytic, Evidence, verify
+from veritas import Analytic, Evidence, falsify
 
 # Define a truth
 truth = Analytic(
@@ -26,7 +26,7 @@ truth = Analytic(
 evidence = Evidence(bindings={"result": 4})
 
 # Verify
-result = verify(truth, evidence)
+result = falsify(truth, evidence)
 print(result.verdict)  # SURVIVED
 ```
 
@@ -42,7 +42,6 @@ def test_addition():
 ```
 """
 
-from .engine import Verifier, quick_check, verify
 from .evidence import Evidence, Verdict, VerdictResult
 from .extensions import (
     DataGrounding,
@@ -51,15 +50,7 @@ from .extensions import (
     InvariantCheck,
     ModelAccuracy,
 )
-from .testing import (
-    ClaimContext,
-    claim,
-    empirical,
-    equality,
-    invariant,
-    probabilistic,
-    verified,
-)
+from .falsification import ClaimContext, claim, falsify, quick_check, verified
 from .truth import Analytic, Empirical, FalsificationForm, Modal, Probabilistic, Truth
 
 __all__ = [
@@ -74,18 +65,13 @@ __all__ = [
     "Evidence",
     "Verdict",
     "VerdictResult",
-    # Engine
-    "Verifier",
-    "verify",
+    # Falsification
+    "falsify",
     "quick_check",
     # Testing API
     "claim",
     "verified",
     "ClaimContext",
-    "equality",
-    "invariant",
-    "empirical",
-    "probabilistic",
     # Extensions
     "DomainTruth",
     "HTTPResponse",
